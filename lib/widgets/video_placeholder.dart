@@ -10,11 +10,7 @@ class VideoPlaceholder extends StatefulWidget {
   final VideoData video;
   final VoidCallback? onTap;
 
-  const VideoPlaceholder({
-    super.key,
-    required this.video,
-    this.onTap,
-  });
+  const VideoPlaceholder({super.key, required this.video, this.onTap});
 
   @override
   State<VideoPlaceholder> createState() => _VideoPlaceholderState();
@@ -71,9 +67,7 @@ class _VideoPlaceholderState extends State<VideoPlaceholder> {
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              shadows: [
-                Shadow(color: Colors.black87, blurRadius: 4),
-              ],
+              shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
             ),
           ),
           const SizedBox(height: 8),
@@ -83,9 +77,7 @@ class _VideoPlaceholderState extends State<VideoPlaceholder> {
             style: TextStyle(
               color: Colors.grey[400],
               fontSize: 12,
-              shadows: const [
-                Shadow(color: Colors.black87, blurRadius: 2),
-              ],
+              shadows: const [Shadow(color: Colors.black87, blurRadius: 2)],
             ),
           ),
         ],
@@ -96,7 +88,7 @@ class _VideoPlaceholderState extends State<VideoPlaceholder> {
   /// 构建进度条占位
   Widget _buildProgressBar() {
     return Positioned(
-      bottom: 20,
+      bottom: 0,
       left: 16,
       right: 16,
       child: GestureDetector(
@@ -109,9 +101,23 @@ class _VideoPlaceholderState extends State<VideoPlaceholder> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 时间显示
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '00:00 / ${_formatDuration(widget.video.duration)}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 10,
+                  shadows: const [Shadow(color: Colors.black87, blurRadius: 2)],
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
             // 进度条
             Container(
-              height: 2,
+              height: 1,
               decoration: BoxDecoration(
                 color: Colors.white24,
                 borderRadius: BorderRadius.circular(1),
@@ -130,18 +136,6 @@ class _VideoPlaceholderState extends State<VideoPlaceholder> {
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 4),
-            // 时间显示
-            Text(
-              '00:00 / ${_formatDuration(widget.video.duration)}',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 10,
-                shadows: const [
-                  Shadow(color: Colors.black87, blurRadius: 2),
                 ],
               ),
             ),

@@ -10,9 +10,12 @@ class Tabs extends StatelessWidget {
       screen: Home(),
       item: ItemConfig(
         icon: SizedBox.shrink(),
-        title: "tuijian",
+        title: "推荐",
         activeForegroundColor: Colors.white, // 选中时的颜色
         inactiveForegroundColor: Colors.grey, // 未选中时的颜色
+        textStyle: TextStyle(
+          height: 2,
+        )
       ),
     ),
     PersistentTabConfig(
@@ -22,6 +25,9 @@ class Tabs extends StatelessWidget {
         title: "messages",
         activeForegroundColor: Colors.white, // 选中时的颜色
         inactiveForegroundColor: Colors.grey, // 未选中时的颜色
+                textStyle: TextStyle(
+          height: 2,
+        )
       ),
     ),
     PersistentTabConfig(
@@ -31,6 +37,9 @@ class Tabs extends StatelessWidget {
         title: "my",
         activeForegroundColor: Colors.white, // 选中时的颜色
         inactiveForegroundColor: Colors.grey, // 未选中时的颜色
+                textStyle: TextStyle(
+          height: 2,
+        )
       ),
     ),
   ];
@@ -39,15 +48,22 @@ class Tabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       // 设置浅色主题
-      theme: ThemeData.light().copyWith(
-        primaryColor: Colors.white, // 改成你想要的颜色
-      ),
+      // theme: ThemeData.light().copyWith(
+      //   primaryColor: Colors.white, // 改成你想要的颜色
+      // ),
       // 设置深色主题
-      darkTheme: ThemeData.dark().copyWith(
-        // 你可以在这里自定义深色主题样式
-        primaryColor: Colors.white,
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: ColorScheme.dark(),
+      // darkTheme: ThemeData.dark().copyWith(
+      //   // 你可以在这里自定义深色主题样式
+      //   primaryColor: Colors.white,
+      //   scaffoldBackgroundColor: Colors.black,
+      //   colorScheme: ColorScheme.dark(),
+      // ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor:Colors.black,
+          primary: Colors.black,
+          secondary: Colors.grey,
+        ),
       ),
       // 使用深色主题
       themeMode: ThemeMode.dark,
@@ -57,10 +73,10 @@ class Tabs extends StatelessWidget {
           navBarConfig: navBarConfig,
           navBarDecoration: NavBarDecoration(
             color: Colors.black,
-            padding: EdgeInsets.only(top: 8, bottom: 12),
+            // padding: EdgeInsets.only(top: 8, bottom: 12),
           ),
         ),
-        navBarOverlap: NavBarOverlap.full(),
+        navBarOverlap: NavBarOverlap.none(),
       ),
     );
   }

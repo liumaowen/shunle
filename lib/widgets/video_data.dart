@@ -28,6 +28,23 @@ class VideoData {
     this.likeCount = 0,
     this.commentCount = 0,
   });
+
+  /// 从 JSON 对象创建 VideoData 实例
+  /// 用于将 API 返回的数据转换为本地数据模型
+  factory VideoData.fromJson(Map<String, dynamic> json) {
+    return VideoData(
+      id: json['id'] as String? ?? '',
+      videoUrl: json['videoUrl'] as String? ?? '',
+      coverUrl: json['coverUrl'] as String? ?? '',
+      description: json['title'] as String? ?? '',  // API 的 title 映射到 description
+      category: json['type'] as String? ?? '',      // API 的 type 映射到 category
+      duration: const Duration(seconds: 0), // API 无此字段，使用默认值
+      authorName: '未知用户',                        // API 无此字段，使用默认值
+      authorAvatar: '',                             // API 无此字段，使用默认值
+      likeCount: 0,                                 // API 无此字段，使用默认值
+      commentCount: 0,                              // API 无此字段，使用默认值
+    );
+  }
 }
 
 /// 生成模拟视频数据

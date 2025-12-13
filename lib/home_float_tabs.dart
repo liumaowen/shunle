@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'widgets/video_data.dart';
-import 'widgets/short_video_list.dart'; // 使用 ShortVideoList 和 generateMockVideos
+import 'package:provider/provider.dart';
+import 'providers/video_list_provider.dart';
+import 'widgets/short_video_list.dart';
 
 /// 首页使用的悬浮Tabs组件
 /// 实现透明背景、不占用空间、横向滚动的分类导航
@@ -45,7 +46,7 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
     // 平滑切换页面
     _pageController.animateToPage(
       index,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
     );
 
@@ -105,14 +106,19 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
             final title = entry.value;
             final isSelected = index == _currentIndex;
 
-            return GestureDetector(
+            return InkWell(
+              // 使用 InkWell 提供更好的点击区域和点击反馈
               onTap: () => _onTabChanged(index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+              child: Padding(
+                // 用 Padding 扩大可点击区域
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     // Tab 文字
                     Text(
@@ -120,8 +126,9 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
                       style: TextStyle(
                         color: isSelected ? Colors.white : Colors.grey,
                         fontSize: 16,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         shadows: [
                           Shadow(
                             color: Colors.black,
@@ -130,13 +137,15 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     // 选中指示器
                     Container(
                       height: 3,
                       width: 30,
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.white : Colors.transparent,
+                        color: isSelected
+                            ? Colors.white
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(1.5),
                       ),
                     ),
@@ -152,8 +161,11 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
 
   /// 构建tab内容（短视频列表）
   Widget _buildTabContent(String tabTitle, int index) {
-    // 为每个 Tab 生成对应的视频列表
-    final videos = generateMockVideos(tabTitle, count: 20);
-    return ShortVideoList(videos: videos);
+    // 使用 ChangeNotifierProvider 包裹 ShortVideoList
+    // 每个 Tab 都有独立的 VideoListProvider 实例
+    return ChangeNotifierProvider(
+      create: (_) => VideoListProvider(),
+      child: const ShortVideoList(),
+    );
   }
 }
