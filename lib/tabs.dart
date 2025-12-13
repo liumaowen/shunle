@@ -48,22 +48,15 @@ class Tabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       // 设置浅色主题
-      // theme: ThemeData.light().copyWith(
-      //   primaryColor: Colors.white, // 改成你想要的颜色
-      // ),
+      theme: ThemeData.light().copyWith(
+        primaryColor: Colors.white, // 改成你想要的颜色
+      ),
       // 设置深色主题
-      // darkTheme: ThemeData.dark().copyWith(
-      //   // 你可以在这里自定义深色主题样式
-      //   primaryColor: Colors.white,
-      //   scaffoldBackgroundColor: Colors.black,
-      //   colorScheme: ColorScheme.dark(),
-      // ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor:Colors.black,
-          primary: Colors.black,
-          secondary: Colors.grey,
-        ),
+      darkTheme: ThemeData.dark().copyWith(
+        // 你可以在这里自定义深色主题样式
+        primaryColor: Colors.white,
+        scaffoldBackgroundColor: Colors.black,
+        colorScheme: ColorScheme.dark(),
       ),
       // 使用深色主题
       themeMode: ThemeMode.dark,

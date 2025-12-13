@@ -4,6 +4,7 @@ library;
 import 'package:flutter/foundation.dart';
 import '../services/video_api_service.dart';
 import '../widgets/video_data.dart';
+import 'package:shunle/services/video_api_service.dart';
 
 /// 加载状态枚举
 enum LoadingState { idle, loading, error }
@@ -17,6 +18,10 @@ class VideoListProvider extends ChangeNotifier {
   /// 视频列表
   List<VideoData> _videos = [];
   List<VideoData> get videos => _videos;
+  set videos(List<VideoData> value) {
+    _videos = value;
+    notifyListeners();
+  }
 
   /// 当前页码
   int _currentPage = 1;
@@ -50,12 +55,13 @@ class VideoListProvider extends ChangeNotifier {
 
     try {
       // 调用 API 获取视频
-      final newVideos = await _apiService.fetchVideos(
-        page: _currentPage,
-        size: _pageSize,
-      );
+      final newVideos = await fetchFromAllProviders();
+      if (newVideos.isEmpty) {
+        _videos = LocalVideoResource.getLocalVideos();
+      } else {
+        _videos = newVideos;
+      }
 
-      _videos = newVideos;
       // 检查是否还有更多数据
       _hasMore = newVideos.length >= _pageSize;
       _loadingState = LoadingState.idle;
@@ -83,10 +89,7 @@ class VideoListProvider extends ChangeNotifier {
       _currentPage++;
 
       // 调用 API 获取下一页视频
-      final newVideos = await _apiService.fetchVideos(
-        page: _currentPage,
-        size: _pageSize,
-      );
+      final newVideos = await fetchFromAllProviders();
 
       // 将新视频追加到列表
       _videos.addAll(newVideos);

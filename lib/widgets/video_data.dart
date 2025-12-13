@@ -31,10 +31,10 @@ class VideoData {
 
   /// 从 JSON 对象创建 VideoData 实例
   /// 用于将 API 返回的数据转换为本地数据模型
-  factory VideoData.fromJson(Map<String, dynamic> json) {
+  factory VideoData.fromJson(Map<String, dynamic> json, int index) {
     return VideoData(
-      id: json['id'] as String? ?? '',
-      videoUrl: json['videoUrl'] as String? ?? '',
+      id: json['id'] as String? ?? 'ks_${DateTime.timestamp()}_$index',
+      videoUrl: json['link'] as String? ?? '',
       coverUrl: json['coverUrl'] as String? ?? '',
       description: json['title'] as String? ?? '',  // API 的 title 映射到 description
       category: json['type'] as String? ?? '',      // API 的 type 映射到 category
@@ -61,3 +61,61 @@ List<VideoData> generateMockVideos(String category, {int count = 20}) {
     );
   });
 }
+
+/// 视频 API 提供者接口
+abstract class VideoApiProvider {
+  String get name;
+  bool get enabled;
+
+  /// 获取视频列表
+  ///
+  /// [collectionId] - 集合 ID（可选）
+  /// [videoType] - 视频类型（可选）
+  /// [sortType] - 排序类型（可选）
+  ///
+  /// 返回视频数据列表
+  Future<List<VideoData>> fetch({
+    String? collectionId,
+    String? videoType,
+    String? sortType,
+  });
+}
+
+/// VideoApiProvider 的具体实现类
+class VideoApiProviderImpl implements VideoApiProvider {
+  @override
+  final String name;
+
+  @override
+  final bool enabled;
+
+  final Future<List<VideoData>> Function({
+    String? collectionId,
+    String? videoType,
+    String? sortType,
+  }) _fetchFunction;
+
+  const VideoApiProviderImpl({
+    required this.name,
+    required this.enabled,
+    required Future<List<VideoData>> Function({
+      String? collectionId,
+      String? videoType,
+      String? sortType,
+    }) fetchFunction,
+  }) : _fetchFunction = fetchFunction;
+
+  @override
+  Future<List<VideoData>> fetch({
+    String? collectionId,
+    String? videoType,
+    String? sortType,
+  }) {
+    return _fetchFunction(
+      collectionId: collectionId,
+      videoType: videoType,
+      sortType: sortType,
+    );
+  }
+}
+

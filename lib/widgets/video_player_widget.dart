@@ -3,12 +3,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'video_data.dart';
 
 /// 视频播放器 Widget
-/// 使用 Chewie 实现视频播放、控制和 UI
+/// 使用 VideoPlayer 实现视频播放，自定义 UI 控制
 class VideoPlayerWidget extends StatefulWidget {
   /// 视频数据
   final VideoData video;
@@ -29,7 +27,6 @@ class VideoPlayerWidget extends StatefulWidget {
 /// 视频播放器状态类
 class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   VideoPlayerController? _videoController;
-  ChewieController? _chewieController;
   bool _isInitialized = false;
   bool _hasError = false;
 
@@ -57,25 +54,22 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   Future<void> _initializePlayer() async {
     try {
       // 创建视频播放器控制器
-      _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(widget.video.videoUrl ?? ''),
-      );
+      // 支持本地视频（assets/ 前缀）和网络视频（http/https）
+      var videoUrl = widget.video.videoUrl ?? '';
+      if (videoUrl.startsWith('assets/')) {
+        // 本地视频：使用 asset 路径
+        // 移除 'assets/' 前缀，因为 asset() 会自动处理
+        var assetPath = videoUrl.replaceFirst('assets/', '');
+        _videoController = VideoPlayerController.asset(assetPath);
+      } else {
+        // 网络视频：使用 URL
+        _videoController = VideoPlayerController.networkUrl(
+          Uri.parse(videoUrl),
+        );
+      }
 
       // 初始化播放器
       await _videoController!.initialize();
-
-      // 创建 Chewie 控制器
-      _chewieController = ChewieController(
-        videoPlayerController: _videoController!,
-        autoPlay: widget.shouldPlay,
-        looping: true,
-        aspectRatio: 9 / 16, // 竖屏视频比例
-        showControls: true,
-        allowFullScreen: false, // 禁用全屏（保持应用内播放）
-        allowMuting: true,
-        // 封面图
-        placeholder: _buildPlaceholder(),
-      );
 
       if (mounted) {
         setState(() {
@@ -83,6 +77,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         });
       }
     } catch (e) {
+      debugPrint('❌ 视频加载错误: $e');
       if (mounted) {
         setState(() {
           _hasError = true;
@@ -101,45 +96,15 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     _videoController?.pause();
   }
 
-  /// 构建封面图占位符
-  Widget _buildPlaceholder() {
-    return Container(
-      color: Colors.black,
-      child: CachedNetworkImage(
-        imageUrl: widget.video.coverUrl,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => Container(
-          color: Colors.black87,
-          child: const Center(
-            child: Icon(Icons.image, color: Colors.white30, size: 48),
-          ),
-        ),
-        errorWidget: (context, url, error) => Container(
-          color: Colors.black87,
-          child: const Center(
-            child: Icon(Icons.broken_image, color: Colors.white30, size: 48),
-          ),
-        ),
-      ),
-    );
-  }
 
   /// 构建加载状态 UI
   Widget _buildLoadingWidget() {
     return Container(
       color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 封面图
-          _buildPlaceholder(),
-          // 加载指示器
-          const Center(
-            child: CircularProgressIndicator(
-              color: Colors.white,
-            ),
-          ),
-        ],
+      child: const Center(
+        child: CircularProgressIndicator(
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -148,84 +113,108 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   Widget _buildErrorWidget() {
     return Container(
       color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 封面图
-          _buildPlaceholder(),
-          // 错误提示
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.white,
-                  size: 48,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '视频加载失败',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white,
-                      ),
-                ),
-              ],
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.white,
+              size: 48,
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              '视频加载失败',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// 构建视频信息叠加层
-  Widget _buildVideoInfo() {
+  /// 构建进度条占位
+  Widget _buildProgressBar() {
+    final duration = _videoController?.value.duration ?? Duration.zero;
+    final position = _videoController?.value.position ?? Duration.zero;
+    final progress = duration.inMilliseconds > 0
+        ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
+
     return Positioned(
-      bottom: 80,
+      bottom: 0,
       left: 16,
-      right: 80,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 视频描述
-          Text(
-            widget.video.description,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              shadows: [
-                Shadow(color: Colors.black87, blurRadius: 4),
-              ],
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          // 分类标签（如果有）
-          if (widget.video.category.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
+      right: 16,
+      child: GestureDetector(
+        onHorizontalDragUpdate: (details) {
+          // 拖动进度条
+          if (_videoController != null && _videoController!.value.isInitialized) {
+            final duration = _videoController!.value.duration;
+            final newPosition =
+                Duration(milliseconds: (details.globalPosition.dx / MediaQuery.of(context).size.width * duration.inMilliseconds).toInt());
+            _videoController!.seekTo(newPosition);
+          }
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 时间显示
+            Align(
+              alignment: Alignment.centerRight,
               child: Text(
-                '#${widget.video.category}',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  shadows: [
-                    Shadow(color: Colors.black87, blurRadius: 2),
-                  ],
+                '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 10,
+                  shadows: const [Shadow(color: Colors.black87, blurRadius: 2)],
                 ),
               ),
             ),
-        ],
+            const SizedBox(height: 4),
+            // 进度条
+            Container(
+              height: 1,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(1),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // 已播放部分
+                  FractionallySizedBox(
+                    widthFactor: progress,
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  /// 格式化时长（mm:ss）
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
   void dispose() {
     // 释放播放器资源
     _videoController?.dispose();
-    _chewieController?.dispose();
     super.dispose();
   }
 
@@ -241,14 +230,78 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       return _buildLoadingWidget();
     }
 
-    // 播放器就绪
+    // 播放器就绪 - 使用自定义 UI 控制
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Chewie 播放器
-        Chewie(controller: _chewieController!),
+        // 视频播放器
+        AspectRatio(
+          aspectRatio: 9 / 16,
+          child: VideoPlayer(_videoController!),
+        ),
+        // 播放/暂停按钮
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              if (_videoController!.value.isPlaying) {
+                _videoController!.pause();
+              } else {
+                _videoController!.play();
+              }
+            });
+          },
+          child: Center(
+            child: _videoController!.value.isPlaying
+                ? Container()
+                : Icon(
+                    Icons.play_arrow_rounded,
+                    size: 80,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+          ),
+        ),
         // 视频信息叠加层
-        _buildVideoInfo(),
+        Positioned(
+          bottom: 80,
+          left: 16,
+          right: 80,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 视频描述
+              Text(
+                widget.video.description,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  shadows: [
+                    Shadow(color: Colors.black87, blurRadius: 4),
+                  ],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              // 分类标签（如果有）
+              if (widget.video.category.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '#${widget.video.category}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      shadows: [
+                        Shadow(color: Colors.black87, blurRadius: 2),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        // 进度条
+        _buildProgressBar(),
       ],
     );
   }

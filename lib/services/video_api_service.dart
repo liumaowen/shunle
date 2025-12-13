@@ -2,8 +2,9 @@
 library;
 
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../widgets/video_data.dart';
+import 'package:shunle/widgets/video_data.dart';
 
 /// 视频 API 服务，封装所有视频数据的网络请求
 class VideoApiService {
@@ -11,7 +12,7 @@ class VideoApiService {
   static const String baseUrl = 'https://www.qylapi.top/api/ksvideo';
 
   /// 请求超时时间（秒）
-  static const Duration timeout = Duration(seconds: 10);
+  static const Duration timeout = Duration(seconds: 60);
 
   /// 获取视频列表
   ///
@@ -31,10 +32,9 @@ class VideoApiService {
   }) async {
     try {
       // 构建 URL
-      final uri = Uri.parse(baseUrl).replace(queryParameters: {
-        'page': page.toString(),
-        'size': size.toString(),
-      });
+      final uri = Uri.parse(baseUrl).replace(
+        queryParameters: {'page': page.toString(), 'size': size.toString()},
+      );
 
       // 发送 GET 请求
       final response = await http.get(uri).timeout(timeout);
@@ -43,14 +43,18 @@ class VideoApiService {
       if (response.statusCode == 200) {
         // 解析 JSON
         final jsonData = json.decode(response.body);
-
         // 检查 API 返回状态
-        if (jsonData['code'] == 200 && jsonData['data'] != null) {
-          final List<dynamic> dataList = jsonData['data'] as List<dynamic>;
+        if (jsonData != null) {
+          final List<dynamic> dataList = jsonData as List<dynamic>;
 
           // 将 JSON 转换为 VideoData 对象列表
-          return dataList
-              .map((item) => VideoData.fromJson(item as Map<String, dynamic>))
+          return dataList.indexed
+              .map(
+                (item) => VideoData.fromJson(
+                  item.$2 as Map<String, dynamic>,
+                  item.$1,
+                ),
+              )
               .toList();
         } else {
           throw Exception('API 返回错误: code=${jsonData['code']}');
@@ -63,5 +67,88 @@ class VideoApiService {
     } catch (e) {
       throw Exception('请求失败: $e');
     }
+  }
+}
+
+// ignore: non_constant_identifier_names
+List<VideoApiProvider> API_PROVIDERS = [
+  VideoApiProviderImpl(
+    name: 'Kuaishou',
+    enabled: false,
+    fetchFunction: ({collectionId, videoType, sortType}) {
+      return VideoApiService().fetchVideos(page: 1, size: 10);
+    },
+  ),
+];
+
+/// 从所有启用的 API 提供商获取视频并合并
+/// @param collectionId 收藏ID，用于不同分类的视频获取
+Future<List<VideoData>> fetchFromAllProviders({
+  String? collectionId,
+  String? videoType,
+  String? sortType,
+}) async {
+  final enabledProviders = API_PROVIDERS.where((p) => p.enabled).toList();
+
+  final futures = enabledProviders.map((provider) async {
+    try {
+      final videos = await provider.fetch();
+      return {'success': true, 'data': videos, 'provider': provider.name};
+    } catch (e) {
+      return {'success': false, 'error': e, 'provider': provider.name};
+    }
+  }).toList();
+
+  final results = await Future.wait(futures);
+
+  final allVideos = <VideoData>[];
+  for (final result in results) {
+    if (result.containsKey('success') && result['success'] == true) {
+      print('${result['provider']}: 获取 ${(result['data'] as List).length} 个视频');
+      allVideos.addAll(result['data'] as List<VideoData>);
+    } else {
+      debugPrint('${result['provider']}: 请求失败 - ${result['error']}');
+    }
+  }
+
+  return allVideos;
+}
+
+/// 本地视频资源（示例数据）
+class LocalVideoResource {
+  static const List<Map<String, dynamic>> mockVideos = [
+    {
+      'id': 'local_1',
+      'title': '本地视频 1',
+      'link': 'assets/videos/1.mp4',
+      'coverUrl': '',
+      'type': '本地',
+    },
+    {
+      'id': 'local_2',
+      'title': '本地视频 2',
+      'link': 'assets/videos/2.mp4',
+      'coverUrl': '',
+      'type': '本地',
+    },
+    {
+      'id': 'local_3',
+      'title': '本地视频 3',
+      'link': 'assets/videos/3.mp4',
+      'coverUrl': '',
+      'type': '本地',
+    }
+  ];
+
+  /// 获取本地视频列表
+  static List<VideoData> getLocalVideos() {
+    return mockVideos
+        .asMap()
+        .entries
+        .map((entry) => VideoData.fromJson(
+              entry.value,
+              entry.key,
+            ))
+        .toList();
   }
 }

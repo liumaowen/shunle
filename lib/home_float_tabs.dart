@@ -24,17 +24,27 @@ class HomeFloatTabs extends StatefulWidget {
 class _HomeFloatTabsState extends State<HomeFloatTabs> {
   late int _currentIndex;
   late PageController _pageController;
+  /// 为每个 Tab 保持独立的 VideoListProvider 实例，防止切换时被销毁
+  late final Map<int, VideoListProvider> _providers;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
+    // 为每个 Tab 创建对应的 Provider 实例
+    _providers = {
+      for (int i = 0; i < widget.tabs.length; i++) i: VideoListProvider(),
+    };
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    // 释放所有 Provider 实例
+    for (final provider in _providers.values) {
+      provider.dispose();
+    }
     super.dispose();
   }
 
@@ -161,10 +171,10 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
 
   /// 构建tab内容（短视频列表）
   Widget _buildTabContent(String tabTitle, int index) {
-    // 使用 ChangeNotifierProvider 包裹 ShortVideoList
-    // 每个 Tab 都有独立的 VideoListProvider 实例
-    return ChangeNotifierProvider(
-      create: (_) => VideoListProvider(),
+    // 使用 ChangeNotifierProvider.value 传入预创建的 Provider 实例
+    // 这样切换 Tab 时不会销毁旧 Provider，避免 "already disposed" 错误
+    return ChangeNotifierProvider<VideoListProvider>.value(
+      value: _providers[index]!,
       child: const ShortVideoList(),
     );
   }

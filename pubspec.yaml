@@ -42,8 +42,6 @@ dependencies:
 
   # 视频播放器相关依赖
   video_player: ^2.10.1          # 核心视频播放器
-  chewie: ^1.13.0                 # 播放器 UI 封装
-  cached_network_image: ^3.4.1  # 封面图缓存
 
 dev_dependencies:
   flutter_test:
@@ -66,6 +64,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # 添加本地资源（视频、图片等）
+  assets:
+    - assets/
+    - assets/videos/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
