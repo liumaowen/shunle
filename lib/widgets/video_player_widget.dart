@@ -252,11 +252,18 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           },
           child: Center(
             child: _videoController!.value.isPlaying
-                ? Container()
+                ? Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                )
                 : Icon(
                     Icons.play_arrow_rounded,
-                    size: 80,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    size: 120,
+                    color: Colors.white.withValues(alpha: 0.5),
                   ),
           ),
         ),
