@@ -96,15 +96,12 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     _videoController?.pause();
   }
 
-
   /// 构建加载状态 UI
   Widget _buildLoadingWidget() {
     return Container(
       color: Colors.black,
       child: const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-        ),
+        child: CircularProgressIndicator(color: Colors.white),
       ),
     );
   }
@@ -117,17 +114,13 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.white,
-              size: 48,
-            ),
+            const Icon(Icons.error_outline, color: Colors.white, size: 48),
             const SizedBox(height: 16),
             Text(
               '视频加载失败',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.white),
             ),
           ],
         ),
@@ -150,10 +143,16 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       child: GestureDetector(
         onHorizontalDragUpdate: (details) {
           // 拖动进度条
-          if (_videoController != null && _videoController!.value.isInitialized) {
+          if (_videoController != null &&
+              _videoController!.value.isInitialized) {
             final duration = _videoController!.value.duration;
-            final newPosition =
-                Duration(milliseconds: (details.globalPosition.dx / MediaQuery.of(context).size.width * duration.inMilliseconds).toInt());
+            final newPosition = Duration(
+              milliseconds:
+                  (details.globalPosition.dx /
+                          MediaQuery.of(context).size.width *
+                          duration.inMilliseconds)
+                      .toInt(),
+            );
             _videoController!.seekTo(newPosition);
           }
         },
@@ -235,10 +234,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       fit: StackFit.expand,
       children: [
         // 视频播放器
-        AspectRatio(
-          aspectRatio: 9 / 16,
-          child: VideoPlayer(_videoController!),
-        ),
+        AspectRatio(aspectRatio: 9 / 16, child: VideoPlayer(_videoController!)),
         // 播放/暂停按钮
         GestureDetector(
           onTap: () {
@@ -251,21 +247,39 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             });
           },
           child: Center(
-            child: _videoController!.value.isPlaying
-                ? Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                )
-                : Icon(
-                    Icons.play_arrow_rounded,
-                    size: 120,
-                    color: Colors.white.withValues(alpha: 0.5),
-                  ),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.6,
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+              ),
+              child: AnimatedOpacity(
+                opacity: _videoController!.value.isPlaying ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 80),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  size: 120,
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
           ),
+          // child: Center(
+          //   child: _videoController!.value.isPlaying
+          //       ? Container(
+          //           width: 60,
+          //           height: 60,
+          //           decoration: BoxDecoration(
+          //             color: Colors.redAccent.withOpacity(0.7),
+          //             borderRadius: BorderRadius.circular(50),
+          //           ),
+          //       )
+          //       : Icon(
+          //           Icons.play_arrow_rounded,
+          //           size: 120,
+          //           color: Colors.white.withValues(alpha: 0.5),
+          //         ),
+          // ),
         ),
         // 视频信息叠加层
         Positioned(
@@ -282,9 +296,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  shadows: [
-                    Shadow(color: Colors.black87, blurRadius: 4),
-                  ],
+                  shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -298,9 +310,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 12,
-                      shadows: [
-                        Shadow(color: Colors.black87, blurRadius: 2),
-                      ],
+                      shadows: [Shadow(color: Colors.black87, blurRadius: 2)],
                     ),
                   ),
                 ),
