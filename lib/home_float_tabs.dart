@@ -24,6 +24,7 @@ class HomeFloatTabs extends StatefulWidget {
 class _HomeFloatTabsState extends State<HomeFloatTabs> {
   late int _currentIndex;
   late PageController _pageController;
+
   /// 为每个 Tab 保持独立的 VideoListProvider 实例，防止切换时被销毁
   late final Map<int, VideoListProvider> _providers;
 
@@ -41,6 +42,8 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
   @override
   void dispose() {
     _pageController.dispose();
+    debugPrint('dispose');
+    debugPrint('dispose${_providers.values.toString()}');
     // 释放所有 Provider 实例
     for (final provider in _providers.values) {
       provider.dispose();
@@ -85,9 +88,7 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
           top: 0,
           left: 0,
           right: 0,
-          child: SafeArea(
-            child: _buildFloatTabBar(),
-          ),
+          child: SafeArea(child: _buildFloatTabBar()),
         ),
       ],
     );
@@ -139,12 +140,7 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
                         fontWeight: isSelected
                             ? FontWeight.bold
                             : FontWeight.normal,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black,
-                            blurRadius: 4,
-                          ),
-                        ],
+                        shadows: [Shadow(color: Colors.black, blurRadius: 4)],
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -153,9 +149,7 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
                       height: 3,
                       width: 30,
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.white
-                            : Colors.transparent,
+                        color: isSelected ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(1.5),
                       ),
                     ),

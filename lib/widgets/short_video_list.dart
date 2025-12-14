@@ -56,16 +56,16 @@ class _ShortVideoListState extends State<ShortVideoList> {
   /// 页面改变回调
   /// 更新当前页面索引，控制视频的播放/暂停
   void _onPageChanged(int index) {
-    setState(() {
-      // 暂停之前的视频
-      _playerKeys[_currentIndex]?.currentState?.pause();
+    // setState(() {
+    // 暂停之前的视频
+    _playerKeys[_currentIndex]?.currentState?.pause();
 
-      // 更新当前索引
-      _currentIndex = index;
+    // 更新当前索引
+    _currentIndex = index;
 
-      // 播放当前视频
-      _playerKeys[_currentIndex]?.currentState?.play();
-    });
+    // 播放当前视频
+    _playerKeys[_currentIndex]?.currentState?.play();
+    // });
   }
 
   @override
@@ -113,8 +113,9 @@ class _ShortVideoListState extends State<ShortVideoList> {
             final video = provider.videos[index];
 
             // 为每个视频创建全局键
-            _playerKeys[index] = GlobalKey<VideoPlayerWidgetState>();
-
+            if (!_playerKeys.containsKey(index)) {
+              _playerKeys[index] = GlobalKey<VideoPlayerWidgetState>();
+            }
             return VideoPlayerWidget(
               key: _playerKeys[index],
               video: video,
@@ -132,9 +133,7 @@ class _ShortVideoListState extends State<ShortVideoList> {
     return Container(
       color: Colors.black,
       child: const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-        ),
+        child: CircularProgressIndicator(color: Colors.white),
       ),
     );
   }
@@ -144,9 +143,7 @@ class _ShortVideoListState extends State<ShortVideoList> {
     return Container(
       color: Colors.black,
       child: const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-        ),
+        child: CircularProgressIndicator(color: Colors.white),
       ),
     );
   }
@@ -159,11 +156,7 @@ class _ShortVideoListState extends State<ShortVideoList> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.white,
-              size: 48,
-            ),
+            const Icon(Icons.error_outline, color: Colors.white, size: 48),
             const SizedBox(height: 16),
             Text(
               errorMessage,

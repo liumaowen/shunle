@@ -4,7 +4,6 @@ library;
 import 'package:flutter/foundation.dart';
 import '../services/video_api_service.dart';
 import '../widgets/video_data.dart';
-import 'package:shunle/services/video_api_service.dart';
 
 /// 加载状态枚举
 enum LoadingState { idle, loading, error }

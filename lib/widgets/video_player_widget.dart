@@ -33,7 +33,10 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    if (mounted) {
+      debugPrint('initstate:${widget.video.id}');
+      _initializePlayer();
+    }
   }
 
   @override
@@ -67,7 +70,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           Uri.parse(videoUrl),
         );
       }
-
+      _videoController!.setLooping(true);
       // 初始化播放器
       await _videoController!.initialize();
 
@@ -234,7 +237,10 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       fit: StackFit.expand,
       children: [
         // 视频播放器
-        AspectRatio(aspectRatio: 9 / 16, child: VideoPlayer(_videoController!)),
+        AspectRatio(
+          aspectRatio: _videoController!.value.aspectRatio,
+          child: VideoPlayer(_videoController!),
+        ),
         // 播放/暂停按钮
         GestureDetector(
           onTap: () {
@@ -250,9 +256,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             child: Container(
               width: MediaQuery.of(context).size.width * 0.9,
               height: MediaQuery.of(context).size.height * 0.6,
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-              ),
+              decoration: BoxDecoration(color: Colors.transparent),
               child: AnimatedOpacity(
                 opacity: _videoController!.value.isPlaying ? 0.0 : 1.0,
                 duration: const Duration(milliseconds: 80),

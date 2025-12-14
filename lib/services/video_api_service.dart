@@ -74,7 +74,7 @@ class VideoApiService {
 List<VideoApiProvider> API_PROVIDERS = [
   VideoApiProviderImpl(
     name: 'Kuaishou',
-    enabled: false,
+    enabled: true,
     fetchFunction: ({collectionId, videoType, sortType}) {
       return VideoApiService().fetchVideos(page: 1, size: 10);
     },
@@ -137,7 +137,7 @@ class LocalVideoResource {
       'link': 'assets/videos/3.mp4',
       'coverUrl': '',
       'type': '本地',
-    }
+    },
   ];
 
   /// 获取本地视频列表
@@ -145,10 +145,7 @@ class LocalVideoResource {
     return mockVideos
         .asMap()
         .entries
-        .map((entry) => VideoData.fromJson(
-              entry.value,
-              entry.key,
-            ))
+        .map((entry) => VideoData.fromJson(entry.value, entry.key))
         .toList();
   }
 }
