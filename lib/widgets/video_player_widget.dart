@@ -25,7 +25,9 @@ class VideoPlayerWidget extends StatefulWidget {
 }
 
 /// 视频播放器状态类
-class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
+/// 使用 AutomaticKeepAliveClientMixin 保持组件状态，实现视频缓存
+class VideoPlayerWidgetState extends State<VideoPlayerWidget>
+    with AutomaticKeepAliveClientMixin {
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   bool _hasError = false;
@@ -216,12 +218,16 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   @override
   void dispose() {
     // 释放播放器资源
+    debugPrint('🔴 dispose 被调用: ${widget.video.id}');
     _videoController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // 必须调用 super.build 以支持 AutomaticKeepAliveClientMixin
+    super.build(context);
+
     // 加载失败
     if (_hasError) {
       return _buildErrorWidget();
@@ -326,4 +332,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       ],
     );
   }
+
+  /// AutomaticKeepAliveClientMixin 必需实现
+  /// 返回 true 表示需要保持组件状态，实现视频缓存
+  @override
+  bool get wantKeepAlive => true;
 }

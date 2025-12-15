@@ -23,8 +23,16 @@ class _ShortVideoListState extends State<ShortVideoList> {
   /// 当前页面索引
   int _currentIndex = 0;
 
+  /// 缓存范围：保活当前视频和前后各 N 个视频
+  /// 例如：_cacheRange = 2 时，同时保活 5 个视频（当前 + 前2 + 后2）
+  /// 可根据设备性能和内存情况调整：1-3 推荐
+  static const int _cacheRange = 2;
+
   /// 每个视频播放器的全局键，用于控制播放/暂停
   final Map<int, GlobalKey<VideoPlayerWidgetState>> _playerKeys = {};
+
+  /// 缓存访问记录（用于 LRU 清理）
+  final List<int> _cacheAccessOrder = [];
 
   @override
   void initState() {
@@ -56,22 +64,75 @@ class _ShortVideoListState extends State<ShortVideoList> {
   /// 页面改变回调
   /// 更新当前页面索引，控制视频的播放/暂停
   void _onPageChanged(int index) {
-    // setState(() {
     // 暂停之前的视频
     _playerKeys[_currentIndex]?.currentState?.pause();
 
     // 更新当前索引
-    _currentIndex = index;
+    setState(() {
+      _currentIndex = index;
+    });
 
     // 播放当前视频
     _playerKeys[_currentIndex]?.currentState?.play();
-    // });
+
+    // 记录访问顺序（LRU）
+    _cacheAccessOrder.remove(index);
+    _cacheAccessOrder.add(index);
+
+    // 清理超出缓存范围的视频播放器
+    _cleanupOutOfRangeVideos();
+  }
+
+  /// 清理超出缓存范围的视频播放器
+  /// 只保活当前视频和前后各 _cacheRange 个视频
+  void _cleanupOutOfRangeVideos() {
+    debugPrint('🔍 开始清理 - 当前索引: $_currentIndex, 缓存范围: $_cacheRange');
+    debugPrint('🔍 清理前缓存键列表: ${_playerKeys.keys.toList()}');
+
+    final keysToRemove = <int>[];
+
+    _playerKeys.forEach((index, key) {
+      final distance = (index - _currentIndex).abs();
+      final shouldRemove = distance > _cacheRange;
+      debugPrint('  index=$index, 距离=$distance, 是否删除=$shouldRemove');
+
+      // 如果视频超出缓存范围，标记为需要删除
+      if (shouldRemove) {
+        keysToRemove.add(index);
+      }
+    });
+
+    // 删除超出范围的键并主动释放播放器资源
+    for (final index in keysToRemove) {
+      // 尝试获取 State 并调用 dispose（如果 Widget 还在树中）
+      final state = _playerKeys[index]?.currentState;
+      if (state != null) {
+        // State 存在，说明 Widget 还在树中，标记为不再保活
+        // AutomaticKeepAliveClientMixin 会在下次重建时自动清理
+        debugPrint('🗑️ 清理视频缓存: index=$index (State 存在)');
+      }
+
+      _playerKeys.remove(index);
+      _cacheAccessOrder.remove(index);
+    }
+
+    debugPrint('🗑️ 清理完成 - 删除了 ${keysToRemove.length} 个, 剩余缓存数: ${_playerKeys.length}');
+    debugPrint('🗑️ 清理后缓存键列表: ${_playerKeys.keys.toList()}');
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _playerKeys.clear();
+    _cacheAccessOrder.clear();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 调试信息：监控缓存数量
+    debugPrint('📊 当前缓存播放器数量: ${_playerKeys.length}');
   }
 
   @override
@@ -112,16 +173,30 @@ class _ShortVideoListState extends State<ShortVideoList> {
 
             final video = provider.videos[index];
 
-            // 为每个视频创建全局键
-            if (!_playerKeys.containsKey(index)) {
-              _playerKeys[index] = GlobalKey<VideoPlayerWidgetState>();
+            // 检查是否在缓存范围内
+            final isInCacheRange = (index - _currentIndex).abs() <= _cacheRange;
+
+            // 只为缓存范围内的视频创建播放器
+            if (isInCacheRange) {
+              // 为每个视频创建全局键
+              if (!_playerKeys.containsKey(index)) {
+                _playerKeys[index] = GlobalKey<VideoPlayerWidgetState>();
+              }
+              return VideoPlayerWidget(
+                key: _playerKeys[index],
+                video: video,
+                // 只有当前可见的视频才播放
+                shouldPlay: index == _currentIndex,
+              );
+            } else {
+              // 超出缓存范围的视频显示占位符
+              return Container(
+                color: Colors.black,
+                child: Center(
+                  child: CircularProgressIndicator(color: Colors.white70),
+                ),
+              );
             }
-            return VideoPlayerWidget(
-              key: _playerKeys[index],
-              video: video,
-              // 只有当前可见的视频才播放
-              shouldPlay: index == _currentIndex,
-            );
           },
         );
       },
