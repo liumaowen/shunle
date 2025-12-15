@@ -165,6 +165,7 @@ class _ShortVideoListState extends State<ShortVideoList> {
           onPageChanged: _onPageChanged,
           // 如果还有更多数据，itemCount 加 1 用于显示加载指示器
           itemCount: provider.videos.length + (provider.hasMore ? 1 : 0),
+          allowImplicitScrolling: true,
           itemBuilder: (context, index) {
             // 最后一项显示加载指示器（当还有更多数据时）
             if (index >= provider.videos.length) {
