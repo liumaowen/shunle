@@ -131,8 +131,6 @@ class _ShortVideoListState extends State<ShortVideoList> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 调试信息：监控缓存数量
-    debugPrint('📊 当前缓存播放器数量: ${_playerKeys.length}');
   }
 
   @override

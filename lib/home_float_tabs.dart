@@ -73,13 +73,16 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
       children: [
         // 底层：全屏视频列表 PageView
         Positioned.fill(
-          child: PageView.builder(
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(), // 禁止 PageView 手动滑动
-            itemCount: widget.tabs.length,
-            itemBuilder: (context, index) {
-              return _buildTabContent(widget.tabs[index], index);
-            },
+          child: SafeArea(
+            bottom: false, // 只在顶部预留空间给状态栏
+            child: PageView.builder(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(), // 禁止 PageView 手动滑动
+              itemCount: widget.tabs.length,
+              itemBuilder: (context, index) {
+                return _buildTabContent(widget.tabs[index], index);
+              },
+            ),
           ),
         ),
 
