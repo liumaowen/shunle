@@ -16,7 +16,7 @@ class VideoListProvider extends ChangeNotifier {
 
   /// 视频列表
   List<VideoData> _videos = [];
-  List<VideoData> get videos => _videos;
+  List<VideoData> get videos => List.unmodifiable(_videos);
   set videos(List<VideoData> value) {
     _videos = value;
     notifyListeners();
@@ -105,6 +105,11 @@ class VideoListProvider extends ChangeNotifier {
       _currentPage--;
       notifyListeners();
     }
+  }
+
+  void removeVideo(String videoId) {
+    _videos.removeWhere((video) => video.id == videoId);
+    notifyListeners();
   }
 
   /// 重试加载（在加载失败时调用）

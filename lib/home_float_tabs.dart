@@ -28,6 +28,9 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
   /// 为每个 Tab 保持独立的 VideoListProvider 实例，防止切换时被销毁
   late final Map<int, VideoListProvider> _providers;
 
+  /// 为每个 Tab 保存 ShortVideoList 的 GlobalKey，用于控制视频播放/暂停
+  late final Map<int, GlobalKey<ShortVideoListState>> _videoListKeys;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +39,11 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
     // 为每个 Tab 创建对应的 Provider 实例
     _providers = {
       for (int i = 0; i < widget.tabs.length; i++) i: VideoListProvider(),
+    };
+    // 为每个 Tab 创建 ShortVideoList 的 GlobalKey
+    _videoListKeys = {
+      for (int i = 0; i < widget.tabs.length; i++)
+        i: GlobalKey<ShortVideoListState>(),
     };
   }
 
@@ -52,6 +60,9 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
   }
 
   void _onTabChanged(int index) {
+    // 暂停上一个 Tab 的视频
+    _videoListKeys[_currentIndex]?.currentState?.pauseCurrentVideo();
+
     setState(() {
       _currentIndex = index;
     });
@@ -62,6 +73,9 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
     );
+
+    // 播放下一个 Tab 的视频
+    _videoListKeys[index]?.currentState?.playCurrentVideo();
 
     // 通知回调
     widget.onTabChanged?.call(index);
@@ -172,7 +186,7 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
     // 这样切换 Tab 时不会销毁旧 Provider，避免 "already disposed" 错误
     return ChangeNotifierProvider<VideoListProvider>.value(
       value: _providers[index]!,
-      child: const ShortVideoList(),
+      child: ShortVideoList(key: _videoListKeys[index]),
     );
   }
 }

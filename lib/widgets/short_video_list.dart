@@ -13,15 +13,25 @@ class ShortVideoList extends StatefulWidget {
   const ShortVideoList({super.key});
 
   @override
-  State<ShortVideoList> createState() => _ShortVideoListState();
+  State<ShortVideoList> createState() => ShortVideoListState();
 }
 
-class _ShortVideoListState extends State<ShortVideoList> {
+class ShortVideoListState extends State<ShortVideoList> {
   /// 页面控制器，管理页面位置
   final PageController _pageController = PageController();
 
   /// 当前页面索引
   int _currentIndex = 0;
+
+  /// 暂停当前播放的视频
+  void pauseCurrentVideo() {
+    _playerKeys[_currentIndex]?.currentState?.pause();
+  }
+
+  /// 播放当前视频
+  void playCurrentVideo() {
+    _playerKeys[_currentIndex]?.currentState?.play();
+  }
 
   /// 缓存范围：保活当前视频和前后各 N 个视频
   /// 例如：_cacheRange = 2 时，同时保活 5 个视频（当前 + 前2 + 后2）
@@ -86,22 +96,15 @@ class _ShortVideoListState extends State<ShortVideoList> {
   /// 清理超出缓存范围的视频播放器
   /// 只保活当前视频和前后各 _cacheRange 个视频
   void _cleanupOutOfRangeVideos() {
-    debugPrint('🔍 开始清理 - 当前索引: $_currentIndex, 缓存范围: $_cacheRange');
-    debugPrint('🔍 清理前缓存键列表: ${_playerKeys.keys.toList()}');
-
     final keysToRemove = <int>[];
-
     _playerKeys.forEach((index, key) {
       final distance = (index - _currentIndex).abs();
       final shouldRemove = distance > _cacheRange;
-      debugPrint('  index=$index, 距离=$distance, 是否删除=$shouldRemove');
-
       // 如果视频超出缓存范围，标记为需要删除
       if (shouldRemove) {
         keysToRemove.add(index);
       }
     });
-
     // 删除超出范围的键并主动释放播放器资源
     for (final index in keysToRemove) {
       // 尝试获取 State 并调用 dispose（如果 Widget 还在树中）
@@ -109,15 +112,11 @@ class _ShortVideoListState extends State<ShortVideoList> {
       if (state != null) {
         // State 存在，说明 Widget 还在树中，标记为不再保活
         // AutomaticKeepAliveClientMixin 会在下次重建时自动清理
-        debugPrint('🗑️ 清理视频缓存: index=$index (State 存在)');
       }
 
       _playerKeys.remove(index);
       _cacheAccessOrder.remove(index);
     }
-
-    debugPrint('🗑️ 清理完成 - 删除了 ${keysToRemove.length} 个, 剩余缓存数: ${_playerKeys.length}');
-    debugPrint('🗑️ 清理后缓存键列表: ${_playerKeys.keys.toList()}');
   }
 
   @override

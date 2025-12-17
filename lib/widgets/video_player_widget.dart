@@ -31,6 +31,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
   bool _hasError = false;
+  Duration _currentPosition = Duration.zero;
+  bool _isSeeking = false;
+  double _progressHeight = 1.0;
 
   @override
   void initState() {
@@ -73,6 +76,10 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         );
       }
       _videoController!.setLooping(true);
+
+      // 监听视频位置变化
+      _videoController!.addListener(_updatePosition);
+
       // 初始化播放器
       await _videoController!.initialize();
 
@@ -86,6 +93,18 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       if (mounted) {
         setState(() {
           _hasError = true;
+        });
+      }
+    }
+  }
+
+  /// 更新视频位置
+  void _updatePosition() {
+    if (_videoController != null && !_isSeeking) {
+      final newPosition = _videoController!.value.position;
+      if (newPosition != _currentPosition) {
+        setState(() {
+          _currentPosition = newPosition;
         });
       }
     }
@@ -136,16 +155,41 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   /// 构建进度条占位
   Widget _buildProgressBar() {
     final duration = _videoController?.value.duration ?? Duration.zero;
-    final position = _videoController?.value.position ?? Duration.zero;
+    final position = _currentPosition;
     final progress = duration.inMilliseconds > 0
         ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
         : 0.0;
-
     return Positioned(
-      bottom: 0,
+      bottom: 2,
       left: 16,
       right: 16,
       child: GestureDetector(
+        onTapDown: (details) {
+          // 点击进度条跳转到对应位置
+          if (_videoController != null &&
+              _videoController!.value.isInitialized) {
+            final duration = _videoController!.value.duration;
+            final tapPosition = details.localPosition.dx;
+            final progress =
+                tapPosition /
+                (MediaQuery.of(context).size.width - 32); // 减去左右padding
+            final newPosition = Duration(
+              milliseconds: (progress * duration.inMilliseconds)
+                  .clamp(0, duration.inMilliseconds)
+                  .toInt(),
+            );
+            setState(() {
+              _currentPosition = newPosition;
+            });
+            _videoController!.seekTo(newPosition);
+          }
+        },
+        onHorizontalDragStart: (details) {
+          _isSeeking = true;
+          setState(() {
+            _progressHeight = 6.0;
+          });
+        },
         onHorizontalDragUpdate: (details) {
           // 拖动进度条
           if (_videoController != null &&
@@ -158,44 +202,74 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                           duration.inMilliseconds)
                       .toInt(),
             );
+            setState(() {
+              _currentPosition = newPosition;
+            });
             _videoController!.seekTo(newPosition);
           }
+        },
+        onHorizontalDragEnd: (details) {
+          _isSeeking = false;
+          setState(() {
+            _progressHeight = 1.0;
+          });
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 时间显示
             Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: 10,
-                  shadows: const [Shadow(color: Colors.black87, blurRadius: 2)],
+              alignment: Alignment.center,
+              child: AnimatedOpacity(
+                opacity: _isSeeking ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 80),
+                child: Text(
+                  '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ),
             ),
-            const SizedBox(height: 4),
-            // 进度条
-            Container(
-              height: 1,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(1),
-              ),
+            const SizedBox(height: 8),
+            // 进度条容器 - 增加触摸区域
+            SizedBox(
+              // 触摸区域高度（比显示高度大）
+              height: 20, // 触摸区域高度
+              // 实际显示的进度条高度
               child: Stack(
-                fit: StackFit.expand,
+                alignment: Alignment.centerLeft,
                 children: [
-                  // 已播放部分
-                  FractionallySizedBox(
-                    widthFactor: progress,
-                    alignment: Alignment.centerLeft,
+                  // 背景轨道（触摸区域）
+                  Container(
+                    height: 20, // 完整触摸区域
+                    color: Colors.transparent,
+                  ),
+                  // 进度条
+                  Positioned(
+                    top: (20 - _progressHeight) / 2, // 垂直居中
+                    left: 0,
+                    right: 0,
                     child: Container(
+                      height: _progressHeight,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white24,
                         borderRadius: BorderRadius.circular(1),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // 已播放部分
+                          FractionallySizedBox(
+                            widthFactor: progress,
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(1),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -219,6 +293,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   void dispose() {
     // 释放播放器资源
     debugPrint('🔴 dispose 被调用: ${widget.video.id}');
+    _videoController?.removeListener(_updatePosition);
     _videoController?.dispose();
     super.dispose();
   }

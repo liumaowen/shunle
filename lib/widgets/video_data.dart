@@ -33,7 +33,7 @@ class VideoData {
   /// 用于将 API 返回的数据转换为本地数据模型
   factory VideoData.fromJson(Map<String, dynamic> json, int index) {
     return VideoData(
-      id: json['id'] as String? ?? 'ks_${DateTime.timestamp()}_$index',
+      id: json['id'] as String? ?? 'ks_${DateTime.now().millisecondsSinceEpoch}_$index',
       videoUrl: json['link'] as String? ?? '',
       coverUrl: json['coverUrl'] as String? ?? '',
       description: json['title'] as String? ?? '',  // API 的 title 映射到 description
