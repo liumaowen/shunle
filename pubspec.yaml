@@ -42,6 +42,7 @@ dependencies:
 
   # 视频播放器相关依赖
   video_player: ^2.10.1          # 核心视频播放器
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

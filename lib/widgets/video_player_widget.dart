@@ -32,6 +32,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   bool _isInitialized = false;
   bool _hasError = false;
   Duration _currentPosition = Duration.zero;
+  final ValueNotifier<Duration> _positionNotifier = ValueNotifier(Duration.zero);
   bool _isSeeking = false;
   double _progressHeight = 1.0;
 
@@ -103,9 +104,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     if (_videoController != null && !_isSeeking) {
       final newPosition = _videoController!.value.position;
       if (newPosition != _currentPosition) {
-        setState(() {
-          _currentPosition = newPosition;
-        });
+        _currentPosition = newPosition;
+        _positionNotifier.value = newPosition;  // 通知监听器，不触发重建
       }
     }
   }
@@ -154,11 +154,13 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
   /// 构建进度条占位
   Widget _buildProgressBar() {
-    final duration = _videoController?.value.duration ?? Duration.zero;
-    final position = _currentPosition;
-    final progress = duration.inMilliseconds > 0
-        ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
-        : 0.0;
+    return ValueListenableBuilder<Duration>(
+      valueListenable: _positionNotifier,
+      builder: (context, position, child) {
+        final duration = _videoController?.value.duration ?? Duration.zero;
+        final progress = duration.inMilliseconds > 0
+            ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
+            : 0.0;
     return Positioned(
       bottom: 2,
       left: 16,
@@ -178,17 +180,15 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                   .clamp(0, duration.inMilliseconds)
                   .toInt(),
             );
-            setState(() {
-              _currentPosition = newPosition;
-            });
+            _currentPosition = newPosition;
+            _positionNotifier.value = newPosition;
             _videoController!.seekTo(newPosition);
           }
         },
         onHorizontalDragStart: (details) {
           _isSeeking = true;
-          setState(() {
-            _progressHeight = 6.0;
-          });
+          _progressHeight = 6.0;
+          setState(() {});  // 只触发UI更新，不更新位置
         },
         onHorizontalDragUpdate: (details) {
           // 拖动进度条
@@ -202,17 +202,15 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                           duration.inMilliseconds)
                       .toInt(),
             );
-            setState(() {
-              _currentPosition = newPosition;
-            });
+            _currentPosition = newPosition;
+            _positionNotifier.value = newPosition;
             _videoController!.seekTo(newPosition);
           }
         },
         onHorizontalDragEnd: (details) {
           _isSeeking = false;
-          setState(() {
-            _progressHeight = 1.0;
-          });
+          _progressHeight = 1.0;
+          setState(() {});  // 只触发UI更新，不更新位置
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,6 +278,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         ),
       ),
     );
+      }, // builder方法的结束
+    ); // ValueListenableBuilder的结束
   }
 
   /// 格式化时长（mm:ss）
@@ -295,6 +295,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     debugPrint('🔴 dispose 被调用: ${widget.video.id}');
     _videoController?.removeListener(_updatePosition);
     _videoController?.dispose();
+    // 释放ValueNotifier资源
+    _positionNotifier.dispose();
     super.dispose();
   }
 

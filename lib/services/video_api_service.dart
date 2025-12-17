@@ -74,7 +74,7 @@ class VideoApiService {
 List<VideoApiProvider> API_PROVIDERS = [
   VideoApiProviderImpl(
     name: 'Kuaishou',
-    enabled: true,
+    enabled: false,
     fetchFunction: ({collectionId, videoType, sortType}) {
       return VideoApiService().fetchVideos(page: 1, size: 10);
     },
