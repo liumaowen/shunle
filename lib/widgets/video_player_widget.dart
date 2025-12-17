@@ -32,7 +32,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   bool _isInitialized = false;
   bool _hasError = false;
   Duration _currentPosition = Duration.zero;
-  final ValueNotifier<Duration> _positionNotifier = ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> _positionNotifier = ValueNotifier(
+    Duration.zero,
+  );
   bool _isSeeking = false;
   double _progressHeight = 1.0;
 
@@ -105,7 +107,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       final newPosition = _videoController!.value.position;
       if (newPosition != _currentPosition) {
         _currentPosition = newPosition;
-        _positionNotifier.value = newPosition;  // 通知监听器，不触发重建
+        _positionNotifier.value = newPosition; // 通知监听器，不触发重建
       }
     }
   }
@@ -159,125 +161,131 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       builder: (context, position, child) {
         final duration = _videoController?.value.duration ?? Duration.zero;
         final progress = duration.inMilliseconds > 0
-            ? (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0)
+            ? (position.inMilliseconds / duration.inMilliseconds).clamp(
+                0.0,
+                1.0,
+              )
             : 0.0;
-    return Positioned(
-      bottom: 2,
-      left: 16,
-      right: 16,
-      child: GestureDetector(
-        onTapDown: (details) {
-          // 点击进度条跳转到对应位置
-          if (_videoController != null &&
-              _videoController!.value.isInitialized) {
-            final duration = _videoController!.value.duration;
-            final tapPosition = details.localPosition.dx;
-            final progress =
-                tapPosition /
-                (MediaQuery.of(context).size.width - 32); // 减去左右padding
-            final newPosition = Duration(
-              milliseconds: (progress * duration.inMilliseconds)
-                  .clamp(0, duration.inMilliseconds)
-                  .toInt(),
-            );
-            _currentPosition = newPosition;
-            _positionNotifier.value = newPosition;
-            _videoController!.seekTo(newPosition);
-          }
-        },
-        onHorizontalDragStart: (details) {
-          _isSeeking = true;
-          _progressHeight = 6.0;
-          setState(() {});  // 只触发UI更新，不更新位置
-        },
-        onHorizontalDragUpdate: (details) {
-          // 拖动进度条
-          if (_videoController != null &&
-              _videoController!.value.isInitialized) {
-            final duration = _videoController!.value.duration;
-            final newPosition = Duration(
-              milliseconds:
-                  (details.globalPosition.dx /
-                          MediaQuery.of(context).size.width *
-                          duration.inMilliseconds)
+        return Positioned(
+          bottom: 2,
+          left: 16,
+          right: 16,
+          child: GestureDetector(
+            onTapDown: (details) {
+              // 点击进度条跳转到对应位置
+              if (_videoController != null &&
+                  _videoController!.value.isInitialized) {
+                final duration = _videoController!.value.duration;
+                final tapPosition = details.localPosition.dx;
+                final progress =
+                    tapPosition /
+                    (MediaQuery.of(context).size.width - 32); // 减去左右padding
+                final newPosition = Duration(
+                  milliseconds: (progress * duration.inMilliseconds)
+                      .clamp(0, duration.inMilliseconds)
                       .toInt(),
-            );
-            _currentPosition = newPosition;
-            _positionNotifier.value = newPosition;
-            _videoController!.seekTo(newPosition);
-          }
-        },
-        onHorizontalDragEnd: (details) {
-          _isSeeking = false;
-          _progressHeight = 1.0;
-          setState(() {});  // 只触发UI更新，不更新位置
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 时间显示
-            Align(
-              alignment: Alignment.center,
-              child: AnimatedOpacity(
-                opacity: _isSeeking ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 80),
-                child: Text(
-                  '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // 进度条容器 - 增加触摸区域
-            SizedBox(
-              // 触摸区域高度（比显示高度大）
-              height: 20, // 触摸区域高度
-              // 实际显示的进度条高度
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                children: [
-                  // 背景轨道（触摸区域）
-                  Container(
-                    height: 20, // 完整触摸区域
-                    color: Colors.transparent,
-                  ),
-                  // 进度条
-                  Positioned(
-                    top: (20 - _progressHeight) / 2, // 垂直居中
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: _progressHeight,
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(1),
-                      ),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          // 已播放部分
-                          FractionallySizedBox(
-                            widthFactor: progress,
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(1),
-                              ),
-                            ),
-                          ),
-                        ],
+                );
+                _currentPosition = newPosition;
+                _positionNotifier.value = newPosition;
+                _videoController!.seekTo(newPosition);
+              }
+            },
+            onHorizontalDragStart: (details) {
+              _isSeeking = true;
+              _progressHeight = 6.0;
+              setState(() {}); // 只触发UI更新，不更新位置
+            },
+            onHorizontalDragUpdate: (details) {
+              // 拖动进度条
+              if (_videoController != null &&
+                  _videoController!.value.isInitialized) {
+                final duration = _videoController!.value.duration;
+                final newPosition = Duration(
+                  milliseconds:
+                      (details.globalPosition.dx /
+                              MediaQuery.of(context).size.width *
+                              duration.inMilliseconds)
+                          .toInt(),
+                );
+                _currentPosition = newPosition;
+                _positionNotifier.value = newPosition;
+                _videoController!.seekTo(newPosition);
+              }
+            },
+            onHorizontalDragEnd: (details) {
+              _isSeeking = false;
+              _progressHeight = 1.0;
+              setState(() {}); // 只触发UI更新，不更新位置
+            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 时间显示
+                SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: AnimatedOpacity(
+                      opacity: _isSeeking ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 80),
+                      child: Text(
+                        '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                SizedBox(height: 8, width: MediaQuery.of(context).size.width),
+                // 进度条容器 - 增加触摸区域
+                SizedBox(
+                  // 触摸区域高度（比显示高度大）
+                  height: 20, // 触摸区域高度
+                  // 实际显示的进度条高度
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      // 背景轨道（触摸区域）
+                      Container(
+                        height: 20, // 完整触摸区域
+                        color: Colors.transparent,
+                      ),
+                      // 进度条
+                      Positioned(
+                        top: (20 - _progressHeight) / 2, // 垂直居中
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: _progressHeight,
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(1),
+                          ),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              // 已播放部分
+                              FractionallySizedBox(
+                                widthFactor: progress,
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(1),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
       }, // builder方法的结束
     ); // ValueListenableBuilder的结束
   }
