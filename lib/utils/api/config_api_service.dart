@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
+import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 import 'package:shunle/utils/crypto/crypto_utils.dart';
 import 'package:shunle/utils/crypto/uuid_utils.dart';
 import 'package:shunle/providers/global_config.dart';
@@ -9,6 +10,9 @@ import 'package:shunle/providers/global_config.dart';
 class ConfigApiService {
   /// 配置 API 基础 URL
   static const String baseUrl = 'https://api.mgtv109.cc';
+    // AES 加密解密配置
+  static const String _aesKey = 'gFzviOY0zOxVq1cu';
+  static const String _aesIv = 'ZmA0Osl677UdSrl0';
 
   /// 请求超时时间（毫秒）
   static const Duration timeout = Duration(seconds: 60);
@@ -46,8 +50,8 @@ class ConfigApiService {
         // 在 Dart 中，http.Response.body 已经是 String 类型
         final text = response.body;
         // 解密数据
-        final decryptedPassword = await CryptoUtils.aesDecrypt(text);
-
+        final decryptedPassword = await AesEncryptSimple.decrypt(_aesKey,_aesIv,text);
+         debugPrint('解密数据: $decryptedPassword');
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
 

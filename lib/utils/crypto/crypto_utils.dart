@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:crypto/crypto.dart';
-import 'package:uuid/uuid.dart';
-import 'aes_crypto.dart';
+import 'package:encrypt/encrypt.dart';
+import 'aes_encrypt_simple.dart';
 import 'hash_utils.dart';
 import 'uuid_utils.dart';
 import 'm3u8_utils.dart';
@@ -16,17 +15,17 @@ class CryptoUtils {
 
   /// AES 加密（CBC模式，PKCS7填充）
   static Future<String> aesEncrypt(String plaintext) async {
-    return await AESCrypto.encrypt(_aesKey, _aesIv, plaintext);
+    return await AesEncryptSimple.encrypt(_aesKey, _aesIv, plaintext);
   }
 
   /// AES 解密（CBC模式，PKCS7填充）
   static Future<String> aesDecrypt(String ciphertext) async {
-    return await AESCrypto.decrypt(_aesKey, _aesIv, ciphertext);
+    return await AesEncryptSimple.decrypt(_aesKey, _aesIv, ciphertext);
   }
 
   /// AES 解密（使用自定义密钥和IV）
   static Future<String> aesDecryptKey(String ciphertext, String key, String iv) async {
-    return await AESCrypto.decrypt(key, iv, ciphertext);
+    return await AesEncryptSimple.decrypt(key, iv, ciphertext);
   }
 
   /// MD5 哈希
