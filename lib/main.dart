@@ -8,6 +8,7 @@ import "package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart";
 import 'package:shunle/interactive_example.dart';
 import 'package:shunle/screens.dart';
 import 'package:shunle/tabs.dart';
+import 'package:shunle/providers/global_config.dart';
 
 class Package {
   final String name;
@@ -23,6 +24,9 @@ void main() {
   // runApp(MyApp());
 
   WidgetsFlutterBinding.ensureInitialized();
+  // 初始化全局配置
+  GlobalConfig.initialize(const Mgtvconfig());
+
   // make navigation bar transparent
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

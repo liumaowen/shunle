@@ -236,7 +236,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                     ),
                   ),
                 ),
-                SizedBox(height: 8, width: MediaQuery.of(context).size.width),
+                SizedBox(height: 8),
                 // 进度条容器 - 增加触摸区域
                 SizedBox(
                   // 触摸区域高度（比显示高度大）

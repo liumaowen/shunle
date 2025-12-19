@@ -43,6 +43,9 @@ dependencies:
   # 视频播放器相关依赖
   video_player: ^2.10.1          # 核心视频播放器
   crypto: ^3.0.7
+  uuid: ^4.5.1                   # UUID 生成
+  intl: ^0.19.0                  # 日期格式化
+  pointycastle: ^3.9.0          # 加密库
 
 dev_dependencies:
   flutter_test:

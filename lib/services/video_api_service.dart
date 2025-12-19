@@ -4,7 +4,10 @@ library;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shunle/providers/global_config.dart';
 import 'package:shunle/widgets/video_data.dart';
+import 'package:shunle/utils/crypto/uuid_utils.dart';
+import 'package:shunle/utils/api/config_api_service.dart';
 
 /// 视频 API 服务，封装所有视频数据的网络请求
 class VideoApiService {
@@ -67,6 +70,24 @@ class VideoApiService {
     } catch (e) {
       throw Exception('请求失败: $e');
     }
+  }
+}
+
+/// 获取配置信息（已弃用，使用 ConfigApiService.fetchConfig）
+@Deprecated('使用 ConfigApiService.fetchConfig 替代')
+void getconfig() async {
+  try {
+    // 使用新的配置 API 服务
+    final config = await ConfigApiService.fetchConfigSafe();
+
+    // 打印配置信息
+    print('配置获取成功:');
+    print('播放域名: ${config['playDomain']}');
+    print('短视频随机最大值: ${config['shortVideoRandomMax']}');
+    print('短视频随机最小值: ${config['shortVideoRandomMin']}');
+
+  } catch (e) {
+    print('配置获取失败: $e');
   }
 }
 

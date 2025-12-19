@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:shunle/examples/config_api_example.dart";
 import "package:shunle/home.dart";
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
 
@@ -7,7 +8,8 @@ class Tabs extends StatelessWidget {
 
   final List<PersistentTabConfig> _tabs = [
     PersistentTabConfig(
-      screen: Home(),
+      // screen: Home(),
+      screen: ConfigApiExample(),
       item: ItemConfig(
         icon: SizedBox.shrink(),
         title: "推荐",
