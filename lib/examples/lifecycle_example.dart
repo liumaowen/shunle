@@ -11,7 +11,7 @@ class LifecycleExample extends StatefulWidget {
 
 class _LifecycleExampleState extends State<LifecycleExample> {
   AppLifecycleState? _currentLifecycleState;
-  bool _isInitialized = false;
+  bool _isInitialized = true;
   Map<String, dynamic>? _configData;
 
   @override

@@ -51,7 +51,6 @@ class ConfigApiService {
         final text = response.body;
         // 解密数据
         final decryptedPassword = await AesEncryptSimple.decrypt(_aesKey,_aesIv,text);
-         debugPrint('解密数据: $decryptedPassword');
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
 
