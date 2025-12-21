@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+
 import 'package:crypto/crypto.dart';
 import 'package:pointycastle/export.dart';
 
@@ -18,7 +19,9 @@ class AESCrypto {
     try {
       // 验证密钥长度
       final keyBytes = utf8.encode(key);
-      if (keyBytes.length != 16 && keyBytes.length != 24 && keyBytes.length != 32) {
+      if (keyBytes.length != 16 &&
+          keyBytes.length != 24 &&
+          keyBytes.length != 32) {
         throw ArgumentError('密钥长度必须是16、24或32字节');
       }
 
@@ -64,11 +67,17 @@ class AESCrypto {
   /// [ciphertext] Base64 编码的密文
   ///
   /// 返回明文
-  static Future<String> decrypt(String key, String iv, String ciphertext) async {
+  static Future<String> decrypt(
+    String key,
+    String iv,
+    String ciphertext,
+  ) async {
     try {
       // 验证密钥长度
       final keyBytes = utf8.encode(key);
-      if (keyBytes.length != 16 && keyBytes.length != 24 && keyBytes.length != 32) {
+      if (keyBytes.length != 16 &&
+          keyBytes.length != 24 &&
+          keyBytes.length != 32) {
         throw ArgumentError('密钥长度必须是16、24或32字节');
       }
 
@@ -100,7 +109,9 @@ class AESCrypto {
       );
 
       // 执行解密
-      final paddedPlaintext = decryptor.process(Uint8List.fromList(cipherBytes));
+      final paddedPlaintext = decryptor.process(
+        Uint8List.fromList(cipherBytes),
+      );
 
       // 移除PKCS7填充
       final plaintext = _pkcs7Unpad(paddedPlaintext);

@@ -2,12 +2,13 @@
 library;
 
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shunle/providers/global_config.dart';
+import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/utils/crypto/uuid_utils.dart';
-import 'package:shunle/utils/api/config_api_service.dart';
 
 /// 视频 API 服务，封装所有视频数据的网络请求
 class VideoApiService {
@@ -71,23 +72,135 @@ class VideoApiService {
       throw Exception('请求失败: $e');
     }
   }
-}
 
-/// 获取配置信息（已弃用，使用 ConfigApiService.fetchConfig）
-@Deprecated('使用 ConfigApiService.fetchConfig 替代')
-void getconfig() async {
-  try {
-    // 使用新的配置 API 服务
-    final config = await ConfigApiService.fetchConfigSafe();
+  /// 获取配置信息
+  static Future<Mgtvconfig> fetchConfigSafe() async {
+    try {
+      return await getConfig();
+    } catch (error) {
+      print('获取配置失败: $error');
+      return Mgtvconfig();
+    }
+  }
 
-    // 打印配置信息
-    print('配置获取成功:');
-    print('播放域名: ${config['playDomain']}');
-    print('短视频随机最大值: ${config['shortVideoRandomMax']}');
-    print('短视频随机最小值: ${config['shortVideoRandomMin']}');
+  static Future<List<VideoData>> fetchMgtvList(
+    Map<String, String> mgtvForm,
+  ) async {
+    try {
+      // 获取配置信息
+      final config = GlobalConfig.instance;
+      // 构建 URL
+      final uri = Uri.parse('${GlobalConfig.apiBase}/Web/VideoList');
+      // 构建请求头
+      final headers = {
+        "authorization": "Bearer null",
+        "priority": "u=1, i",
+        "x-auth-uuid": UUIDUtils.generateV4(),
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+      };
+      // 发送 POST 请求
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: Uri(queryParameters: mgtvForm).query,
+          )
+          .timeout(timeout);
+      if (response.statusCode == 200) {
+        final text = response.body;
+        // 解密数据
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
+        // 解析 JSON
+        final list99 = json.decode(decryptedPassword);
+        // 提取数据
+        final list100 = list99?['data']['items'] ?? [];
+        final List<dynamic> dataList = list100 as List<dynamic>;
+        for (final element in dataList) {
+          element['link'] = AesEncryptSimple.getm3u8(
+            config.playDomain,
+            element['playUrl'],
+          );
 
-  } catch (e) {
-    print('配置获取失败: $e');
+          // 设置封面 URL
+          element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
+        }
+        if (dataList.isEmpty) {
+          return [];
+        } else {
+          // 将 JSON 转换为 VideoData 对象列表
+          return dataList.indexed
+              .map(
+                (item) => VideoData.fromJson(
+                  item.$2 as Map<String, dynamic>,
+                  item.$1,
+                ),
+              )
+              .toList();
+        }
+      } else {
+        throw Exception('HTTP 错误: ${response.statusCode}');
+      }
+    } catch (error) {
+      throw Exception('获取Mgtv失败: $error');
+    }
+  }
+
+  static Future<Mgtvconfig> getConfig() async {
+    try {
+      Mgtvconfig mgtvconfig = Mgtvconfig();
+      int shortVideoRandomMax = mgtvconfig.shortVideoRandomMax; // 默认值
+      int shortVideoRandomMin = mgtvconfig.shortVideoRandomMin; // 默认值
+      String playDomain = mgtvconfig.playDomain;
+      // 构建 URL
+      final uri = Uri.parse('${GlobalConfig.apiBase}/Web/Config');
+      // 请求头
+      final headers = {
+        'authorization': 'Bearer null',
+        'priority': 'u=1, i',
+        'x-auth-uuid': UUIDUtils.generateV4(),
+        'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      };
+      // 发送 POST 请求
+      final response = await http.post(uri, headers: headers).timeout(timeout);
+      if (response.statusCode == 200) {
+        final text = response.body;
+        // 解密数据
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
+        // 解析 JSON
+        final list99 = json.decode(decryptedPassword);
+        // 提取数据
+        final list100 = list99?['data'] ?? [];
+        for (final element in list100) {
+          if (element is Map<String, dynamic>) {
+            if (element['pKey'] == 'ShortVideoRandomPage') {
+              shortVideoRandomMax =
+                  num.tryParse(
+                    element['value2']?.toString() ?? '200',
+                  )?.toInt() ??
+                  200;
+              shortVideoRandomMin =
+                  num.tryParse(element['value1']?.toString() ?? '1')?.toInt() ??
+                  1;
+            }
+            if (element['pKey'] == 'PlayDomain') {
+              playDomain = element['value1'];
+            }
+          }
+        }
+        mgtvconfig = Mgtvconfig(
+          shortVideoRandomMax: shortVideoRandomMax,
+          shortVideoRandomMin: shortVideoRandomMin,
+          playDomain: playDomain,
+          initialized: true,
+        );
+        GlobalConfig.initialize(mgtvconfig);
+        return mgtvconfig;
+      } else {
+        throw Exception('HTTP 获取配置错误: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('配置获取失败: $e');
+    }
   }
 }
 
@@ -95,9 +208,29 @@ void getconfig() async {
 List<VideoApiProvider> API_PROVIDERS = [
   VideoApiProviderImpl(
     name: 'Kuaishou',
-    enabled: true,
+    enabled: false,
     fetchFunction: ({collectionId, videoType, sortType}) {
       return VideoApiService().fetchVideos(page: 1, size: 10);
+    },
+  ),
+  VideoApiProviderImpl(
+    name: 'Mgtv',
+    enabled: true,
+    fetchFunction: ({collectionId, videoType, sortType}) {
+      int pageindex =
+          (Random().nextDouble() *
+                  (GlobalConfig.shortVideoRandomMax -
+                      GlobalConfig.shortVideoRandomMin +
+                      1))
+              .floor() +
+          GlobalConfig.shortVideoRandomMin;
+      Map<String, String> mgtvForm = {
+        'PageIndex': pageindex.toString(),
+        'PageSize': '4',
+        'VideoType': '1',
+        'SortType': '7',
+      };
+      return VideoApiService.fetchMgtvList(mgtvForm);
     },
   ),
 ];

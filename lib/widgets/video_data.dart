@@ -1,13 +1,15 @@
 /// 短视频数据模型
 library;
 
+import 'dart:typed_data';
+
 /// 单个视频的数据结构
 class VideoData {
   final String id;
   final String description;      // 视频描述
   final Duration duration;        // 视频时长
-  final String coverUrl;          // 封面图 URL（预留，未来实现）
-  final String? videoUrl;         // 视频 URL（预留，未来实现）
+  final String coverUrl;          // 封面图 URL
+  final String? videoUrl;         // 视频 URL
 
   // 预留字段（未来扩展）
   final String authorName;        // 作者名称
@@ -16,7 +18,32 @@ class VideoData {
   final int commentCount;         // 评论数
   final String category;          // 分类（推荐、关注等）
 
-  const VideoData({
+  /// 封面图片缓存
+  Uint8List? _cachedCover;
+
+  /// 是否加载失败
+  bool _loadFailed = false;
+
+  /// 获取缓存的封面图片
+  Uint8List? get cachedCover => _cachedCover;
+
+  /// 设置缓存的封面图片
+  set cachedCover(Uint8List? value) {
+    _cachedCover = value;
+  }
+
+  /// 是否已缓存封面
+  bool get isCoverCached => _cachedCover != null;
+
+  /// 是否加载失败
+  bool get isLoadFailed => _loadFailed;
+
+  /// 标记为加载失败
+  void markAsFailed() {
+    _loadFailed = true;
+  }
+
+  VideoData({
     required this.id,
     required this.description,
     required this.duration,

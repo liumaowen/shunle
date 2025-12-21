@@ -7,7 +7,6 @@ import 'package:shunle/services/app_initializer.dart';
 import 'package:shunle/tabs.dart';
 import 'package:shunle/providers/global_config.dart';
 
-
 void main() async {
   // runApp(MyApp());
 
@@ -85,4 +84,3 @@ class MinimalExample extends StatelessWidget {
         Style1BottomNavBar(navBarConfig: navBarConfig),
   );
 }
-

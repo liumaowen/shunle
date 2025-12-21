@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'providers/video_list_provider.dart';
-import 'widgets/short_video_list.dart';
+import '../providers/video_list_provider.dart';
+import '../widgets/short_video_list.dart';
 
 /// 首页使用的悬浮Tabs组件
 /// 实现透明背景、不占用空间、横向滚动的分类导航
@@ -34,6 +35,7 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
   @override
   void initState() {
     super.initState();
+    debugPrint('heihei:$kIsWeb.toString()');
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
     // 为每个 Tab 创建对应的 Provider 实例

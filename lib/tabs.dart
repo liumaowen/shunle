@@ -1,5 +1,7 @@
+import "dart:ui";
+
 import "package:flutter/material.dart";
-import "package:shunle/home.dart";
+import "package:shunle/home/home.dart";
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
 
 class Tabs extends StatelessWidget {
@@ -13,9 +15,7 @@ class Tabs extends StatelessWidget {
         title: "推荐",
         activeForegroundColor: Colors.white, // 选中时的颜色
         inactiveForegroundColor: Colors.grey, // 未选中时的颜色
-        textStyle: TextStyle(
-          height: 2,
-        )
+        textStyle: TextStyle(height: 2),
       ),
     ),
     PersistentTabConfig(
@@ -25,9 +25,7 @@ class Tabs extends StatelessWidget {
         title: "messages",
         activeForegroundColor: Colors.white, // 选中时的颜色
         inactiveForegroundColor: Colors.grey, // 未选中时的颜色
-                textStyle: TextStyle(
-          height: 2,
-        )
+        textStyle: TextStyle(height: 2),
       ),
     ),
     PersistentTabConfig(
@@ -37,9 +35,7 @@ class Tabs extends StatelessWidget {
         title: "my",
         activeForegroundColor: Colors.white, // 选中时的颜色
         inactiveForegroundColor: Colors.grey, // 未选中时的颜色
-                textStyle: TextStyle(
-          height: 2,
-        )
+        textStyle: TextStyle(height: 2),
       ),
     ),
   ];
@@ -48,7 +44,8 @@ class Tabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       // 设置浅色主题
-      theme: ThemeData.light().copyWith(
+      theme: ThemeData(
+        fontFamily: 'Roboto',
         primaryColor: Colors.white, // 改成你想要的颜色
       ),
       // 设置深色主题
@@ -60,6 +57,8 @@ class Tabs extends StatelessWidget {
       ),
       // 使用深色主题
       themeMode: ThemeMode.dark,
+      scrollBehavior: MyScrollBehavior(),
+      // home: VerticalPageDemo(),
       home: PersistentTabView(
         tabs: _tabs,
         navBarBuilder: (navBarConfig) => Style1BottomNavBar(
@@ -73,4 +72,13 @@ class Tabs extends StatelessWidget {
       ),
     );
   }
+}
+
+class MyScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+  };
 }

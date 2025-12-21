@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:encrypt/encrypt.dart';
 import 'aes_encrypt_simple.dart';
 import 'hash_utils.dart';
 import 'uuid_utils.dart';
@@ -15,17 +14,21 @@ class CryptoUtils {
 
   /// AES 加密（CBC模式，PKCS7填充）
   static Future<String> aesEncrypt(String plaintext) async {
-    return await AesEncryptSimple.encrypt(_aesKey, _aesIv, plaintext);
+    return await AesEncryptSimple.encrypt(plaintext);
   }
 
   /// AES 解密（CBC模式，PKCS7填充）
   static Future<String> aesDecrypt(String ciphertext) async {
-    return await AesEncryptSimple.decrypt(_aesKey, _aesIv, ciphertext);
+    return await AesEncryptSimple.decrypt(ciphertext);
   }
 
   /// AES 解密（使用自定义密钥和IV）
-  static Future<String> aesDecryptKey(String ciphertext, String key, String iv) async {
-    return await AesEncryptSimple.decrypt(key, iv, ciphertext);
+  static Future<String> aesDecryptKey(
+    String ciphertext,
+    String key,
+    String iv,
+  ) async {
+    return await AesEncryptSimple.decrypt(ciphertext);
   }
 
   /// MD5 哈希
@@ -82,22 +85,32 @@ class CryptoUtils {
     }
 
     final random = Random.secure();
-    return List.generate(length, (_) => chars[random.nextInt(chars.length)]).join();
+    return List.generate(
+      length,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
   }
 
   /// 生成时间戳字符串
   static String generateTimestamp({int? millisecondsSinceEpoch}) {
-    final timestamp = millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch;
+    final timestamp =
+        millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch;
     return timestamp.toString();
   }
 
   /// 格式化日期
-  static String formatDate(DateTime date, {String format = 'yyyy-MM-dd HH:mm:ss'}) {
+  static String formatDate(
+    DateTime date, {
+    String format = 'yyyy-MM-dd HH:mm:ss',
+  }) {
     return DateUtils.format(date, format: format);
   }
 
   /// 从日期字符串获取时间戳
-  static int? getTimestampFromDateString(String dateString, {String format = 'yyyy-MM-dd HH:mm:ss'}) {
+  static int? getTimestampFromDateString(
+    String dateString, {
+    String format = 'yyyy-MM-dd HH:mm:ss',
+  }) {
     return DateUtils.parseToTimestamp(dateString, format: format);
   }
 
@@ -115,12 +128,19 @@ class CryptoUtils {
   }
 
   /// 验证 M3U8 URL 签名
-  static bool validateM3U8Signature(String url, {String salt = 'wB760Vqpk76oRSVA1TNz'}) {
+  static bool validateM3U8Signature(
+    String url, {
+    String salt = 'wB760Vqpk76oRSVA1TNz',
+  }) {
     return M3U8Utils.validateSignature(url, salt: salt);
   }
 
   /// HMAC 签名
-  static String generateHMAC(String key, String data, {String algorithm = 'sha256'}) {
+  static String generateHMAC(
+    String key,
+    String data, {
+    String algorithm = 'sha256',
+  }) {
     switch (algorithm) {
       case 'sha256':
         return HashUtils.hmacSha256(key, data);

@@ -1,5 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:shunle/utils/api/config_api_service.dart';
+import 'package:shunle/services/video_api_service.dart';
 
 /// 应用初始化服务
 /// 提供应用启动时的各种初始化功能
@@ -12,7 +14,7 @@ class AppInitializer {
     BuildContext? context,
     bool showLoading = true,
   }) async {
-    print('开始应用初始化...');
+    debugPrint('开始应用初始化...');
 
     if (showLoading && context != null) {
       _showLoadingIndicator(context);
@@ -25,10 +27,9 @@ class AppInitializer {
       // 2. 其他初始化任务
       await _performOtherInitializations();
 
-      print('应用初始化完成');
-
+      debugPrint('应用初始化完成');
     } catch (e) {
-      print('应用初始化失败: $e');
+      debugPrint('应用初始化失败: $e');
       rethrow;
     } finally {
       if (showLoading && context != null) {
@@ -39,14 +40,10 @@ class AppInitializer {
 
   /// 获取配置
   static Future<void> _fetchConfig() async {
-    print('正在获取应用配置...');
-
-    final config = await ConfigApiService.fetchConfigSafe();
-
-    print('配置获取成功:');
-    print('播放域名: ${config['playDomain']}');
-    print('短视频随机最大值: ${config['shortVideoRandomMax']}');
-    print('短视频随机最小值: ${config['shortVideoRandomMin']}');
+    debugPrint('正在获取应用配置...');
+    final config = await VideoApiService.fetchConfigSafe();
+    debugPrint('配置获取成功:');
+    debugPrint('播放域名: ${config.playDomain}');
   }
 
   /// 执行其他初始化任务
@@ -58,12 +55,12 @@ class AppInitializer {
     // - 注册推送通知
     // - 初始化第三方服务等
 
-    print('执行其他初始化任务...');
+    debugPrint('执行其他初始化任务...');
 
     // 模拟其他初始化任务
-    await Future.delayed(const Duration(milliseconds: 100));
+    // await Future.delayed(const Duration(milliseconds: 100));
 
-    print('其他初始化任务完成');
+    debugPrint('其他初始化任务完成');
   }
 
   /// 显示加载指示器
@@ -71,19 +68,12 @@ class AppInitializer {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
   }
 
   /// 隐藏加载指示器
   static void _hideLoadingIndicator(BuildContext context) {
     Navigator.of(context).pop();
-  }
-
-  /// 仅获取配置（不显示加载指示器）
-  static Future<Map<String, dynamic>> fetchConfigOnly() async {
-    return await ConfigApiService.fetchConfigSafe();
   }
 }

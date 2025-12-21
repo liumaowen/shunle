@@ -16,11 +16,22 @@ class Mgtvconfig {
   });
 }
 
+/// mgtv请求体
+class FormType {
+  // ignore: non_constant_identifier_names
+  String? PageIndex;
+  // ignore: non_constant_identifier_names
+  String? PageSize;
+  // ignore: non_constant_identifier_names
+  String? VideoType;
+  // ignore: non_constant_identifier_names
+  String? SortType;
+}
+
 /// 全局配置类
 class GlobalConfig {
   static Mgtvconfig? _instance;
-  static String apibase = 'https://api.mgtv109.cc'; // 默认域名
-  static const String playdomainbase = 'https://api.mgtv109.cc'; // API 基础地址
+  static String apiBase = 'https://api.mgtv109.cc'; // 请求API域名
 
   // 私有构造函数，防止实例化
   GlobalConfig._();
@@ -51,8 +62,6 @@ class GlobalConfig {
   static int get shortVideoRandomMin => instance.shortVideoRandomMin;
   static String get playDomain => instance.playDomain;
   static bool get initialized => instance.initialized;
-  static String get apiBase => apibase;
-  static String get playDomainBase => playdomainbase;
 
   /// 便捷重置方法
   static void reset() {

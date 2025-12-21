@@ -62,7 +62,7 @@ class VideoListProvider extends ChangeNotifier {
       }
 
       // 检查是否还有更多数据
-      _hasMore = newVideos.length >= _pageSize;
+      // _hasMore = newVideos.length >= _pageSize;
       _loadingState = LoadingState.idle;
       notifyListeners();
     } catch (e) {
@@ -77,9 +77,6 @@ class VideoListProvider extends ChangeNotifier {
   Future<void> loadNextPage() async {
     // 防止重复加载
     if (_loadingState == LoadingState.loading) return;
-
-    // 如果没有更多数据，不继续加载
-    if (!_hasMore) return;
 
     _loadingState = LoadingState.loading;
     notifyListeners();
