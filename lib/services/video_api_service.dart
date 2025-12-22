@@ -146,12 +146,16 @@ class VideoApiService {
   }
 
   /// 获取短剧
-  static Future<List<VideoData>> fetchDrama(Map<String, String> dramaForm) async {
-        try {
+  static Future<List<VideoData>> fetchDrama(
+    Map<String, String> dramaForm,
+  ) async {
+    try {
       // 获取配置信息
       final config = GlobalConfig.instance;
       // 构建 URL
-      final uri = Uri.parse('${GlobalConfig.apiBase}/ShortMovie/ShortMovieList');
+      final uri = Uri.parse(
+        '${GlobalConfig.apiBase}/ShortMovie/ShortMovieList',
+      );
       // 构建请求头
       final headers = {
         "authorization": "Bearer null",
@@ -163,11 +167,7 @@ class VideoApiService {
       final String aesform = AesEncryptSimple.encrypt(json.encode(dramaForm));
       // 发送 POST 请求
       final response = await http
-          .post(
-            uri,
-            headers: headers,
-            body: aesform,
-          )
+          .post(uri, headers: headers, body: aesform)
           .timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
@@ -175,29 +175,38 @@ class VideoApiService {
         final decryptedPassword = AesEncryptSimple.decrypt(text);
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
-        print('list99:$list99');
+        // 提取数据
+        final list100 = list99?['data']['items'] ?? [];
+        final List<dynamic> dataList = list100 as List<dynamic>;
+        for (final element in dataList) {
+          element['link'] = AesEncryptSimple.getm3u8(
+            config.playDomain,
+            element['first']['playUrl'],
+          );
 
-        // 处理响应数据（参考 TypeScript 版本）
-        if (list99?['data']?['items'] != null) {
-          final List<dynamic> dataList = list99['data']['items'];
-          if (dataList.isNotEmpty) {
-            return dataList.indexed
-                .map(
-                  (item) => VideoData.fromJson(
-                    item.$2 as Map<String, dynamic>,
-                    item.$1,
-                  ),
-                )
-                .toList();
-          }
+          // 设置封面 URL
+          // element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
         }
-        return [];
+
+        if (dataList.isEmpty) {
+          return [];
+        } else {
+          // 将 JSON 转换为 VideoData 对象列表
+          return dataList.indexed
+              .map(
+                (item) => VideoData.fromJson(
+                  item.$2 as Map<String, dynamic>,
+                  item.$1,
+                ),
+              )
+              .toList();
+        }
       } else {
         throw Exception('HTTP 错误: ${response.statusCode}');
       }
-      }catch (error) {
-        throw Exception('获取drama失败: $error');
-      }
+    } catch (error) {
+      throw Exception('获取drama失败: $error');
+    }
   }
 
   static Future<Mgtvconfig> getConfig() async {
@@ -264,7 +273,7 @@ List<VideoApiProvider> API_PROVIDERS = [
   VideoApiProviderImpl(
     name: 'Kuaishou',
     enabled: false,
-    fetchFunction: ({page, videoType, sortType,collectionId}) {
+    fetchFunction: ({page, videoType, sortType, collectionId}) {
       return VideoApiService().fetchVideos(page: 1, size: 10);
     },
   ),
@@ -282,9 +291,9 @@ List<VideoApiProvider> API_PROVIDERS = [
       Map<String, String> mgtvForm = {
         'PageIndex': page!.isNotEmpty ? page : pageindex.toString(),
         'PageSize': '5',
-        'VideoType': videoType?? '',
-        'SortType': sortType?? '0',
-        'CollectionId': collectionId?? '',
+        'VideoType': videoType ?? '',
+        'SortType': sortType ?? '0',
+        'CollectionId': collectionId ?? '',
       };
       return VideoApiService.fetchMgtvList(mgtvForm);
     },
@@ -294,8 +303,8 @@ List<VideoApiProvider> API_PROVIDERS = [
     enabled: true,
     fetchFunction: ({page, videoType, sortType, collectionId}) {
       Map<String, String> mgtvForm = {
-        'PageIndex': '1',  // 保持 int 类型
-        'PageSize': '5',   // 保持 int 类型
+        'PageIndex': '1',
+        'PageSize': '5',
         'ChannelId': '',
         'GenderChannelType': '',
       };
@@ -315,7 +324,12 @@ Future<List<VideoData>> fetchFromAllProviders({
   final enabledProviders = API_PROVIDERS.where((p) => p.enabled).toList();
   final futures = enabledProviders.map((provider) async {
     try {
-      final videos = await provider.fetch(page:page, collectionId: collectionId, videoType: videoType, sortType: sortType);
+      final videos = await provider.fetch(
+        page: page,
+        collectionId: collectionId,
+        videoType: videoType,
+        sortType: sortType,
+      );
       return {'success': true, 'data': videos, 'provider': provider.name};
     } catch (e) {
       return {'success': false, 'error': e, 'provider': provider.name};

@@ -414,7 +414,6 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
     // 必须调用 super.build 以支持 AutomaticKeepAliveClientMixin
@@ -437,7 +436,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
           // 使用 FittedBox 来强制视频按原始比例显示，防止拉伸
           videoWidget = FittedBox(
-            fit: BoxFit.contain,  // 保持比例，完整显示视频
+            fit: BoxFit.contain, // 保持比例，完整显示视频
             alignment: Alignment.center,
             child: SizedBox(
               width: videoRatio > 1.0 ? constraints.maxWidth : null,
@@ -465,9 +464,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
             // 视频封面层（仅在初始化前显示）
             if (!_isInitialized && widget.video.cachedCover != null)
-              Positioned.fill(
-                child: _buildCoverImage(),
-              ),
+              Positioned.fill(child: _buildCoverImage()),
 
             // 播放/暂停按钮（仅在初始化后显示）
             if (_isInitialized)
@@ -484,7 +481,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                 child: Center(
                   child: Container(
                     width: MediaQuery.of(context).size.width * 0.9,
-                    height: MediaQuery.of(context).size.height * 0.6,
+                    height: MediaQuery.of(context).size.height * 0.7,
                     decoration: BoxDecoration(color: Colors.transparent),
                     child: AnimatedOpacity(
                       opacity: _videoController!.value.isPlaying ? 0.0 : 1.0,
@@ -528,19 +525,34 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                           '#${widget.video.category}',
                           style: const TextStyle(
                             color: Colors.white70,
-                            fontSize: 12,
+                            fontSize: 14,
                           ),
                         ),
                       ),
                   ],
                 ),
               ),
-
+            if (widget.video.episodeCount > 1) _episodeCountBar(),
             // 进度条（仅在初始化后显示）
             if (_isInitialized) _buildProgressBar(),
           ],
         );
       },
+    );
+  }
+
+  /// 构建集数行
+  Widget _episodeCountBar() {
+    return Positioned(
+      bottom: 60,
+      left: 16,
+      right: 16,
+      child: Center(
+        child: Text(
+          '观看完整短剧·全${widget.video.episodeCount}集',
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+        ),
+      ),
     );
   }
 

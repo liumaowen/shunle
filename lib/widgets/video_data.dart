@@ -6,17 +6,18 @@ import 'dart:typed_data';
 /// 单个视频的数据结构
 class VideoData {
   final String id;
-  final String description;      // 视频描述
-  final Duration duration;        // 视频时长
-  final String coverUrl;          // 封面图 URL
-  final String? videoUrl;         // 视频 URL
+  final String description; // 视频描述
+  final Duration duration; // 视频时长
+  final String coverUrl; // 封面图 URL
+  final String? videoUrl; // 视频 URL
 
   // 预留字段（未来扩展）
-  final String authorName;        // 作者名称
-  final String authorAvatar;      // 作者头像 URL
-  final int likeCount;            // 点赞数
-  final int commentCount;         // 评论数
-  final String category;          // 分类（推荐、关注等）
+  final String authorName; // 作者名称
+  final String authorAvatar; // 作者头像 URL
+  final int likeCount; // 点赞数
+  final int commentCount; // 评论数
+  final String category; // 分类（推荐、关注等）
+  final int episodeCount; // 集数（仅用于短剧）
 
   /// 封面图片缓存
   Uint8List? _cachedCover;
@@ -54,22 +55,30 @@ class VideoData {
     this.authorAvatar = '',
     this.likeCount = 0,
     this.commentCount = 0,
+    this.episodeCount = 0,
   });
 
   /// 从 JSON 对象创建 VideoData 实例
   /// 用于将 API 返回的数据转换为本地数据模型
   factory VideoData.fromJson(Map<String, dynamic> json, int index) {
+    print(json);
     return VideoData(
-      id: json['id'] as String? ?? 'ks_${DateTime.now().millisecondsSinceEpoch}_$index',
+      id:
+          json['id'] as String? ??
+          'ks_${DateTime.now().millisecondsSinceEpoch}_$index',
       videoUrl: json['link'] as String? ?? '',
       coverUrl: json['coverUrl'] as String? ?? '',
-      description: json['title'] as String? ?? '',  // API 的 title 映射到 description
-      category: json['type'] as String? ?? '',      // API 的 type 映射到 category
+      description:
+          json['title'] as String? ?? '', // API 的 title 映射到 description
+      category:
+          json['channelName'] as String? ??
+          '', // API 的 channelName 映射到 category
       duration: const Duration(seconds: 0), // API 无此字段，使用默认值
-      authorName: '未知用户',                        // API 无此字段，使用默认值
-      authorAvatar: '',                             // API 无此字段，使用默认值
-      likeCount: 0,                                 // API 无此字段，使用默认值
-      commentCount: 0,                              // API 无此字段，使用默认值
+      authorName: '未知用户', // API 无此字段，使用默认值
+      authorAvatar: '', // API 无此字段，使用默认值
+      likeCount: 0, // API 无此字段，使用默认值
+      commentCount: 0, // API 无此字段，使用默认值
+      episodeCount: int.tryParse(json['episodeCount']?.toString() ?? '0') ?? 0, // 集数
     );
   }
 }
@@ -122,7 +131,8 @@ class VideoApiProviderImpl implements VideoApiProvider {
     String? collectionId,
     String? videoType,
     String? sortType,
-  }) _fetchFunction;
+  })
+  _fetchFunction;
 
   const VideoApiProviderImpl({
     required this.name,
@@ -132,7 +142,8 @@ class VideoApiProviderImpl implements VideoApiProvider {
       String? collectionId,
       String? videoType,
       String? sortType,
-    }) fetchFunction,
+    })
+    fetchFunction,
   }) : _fetchFunction = fetchFunction;
 
   @override
@@ -166,4 +177,3 @@ class TabsType {
     this.collectionId,
   });
 }
-

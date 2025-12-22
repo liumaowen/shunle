@@ -23,7 +23,7 @@ class Tabs extends StatelessWidget {
       screen: Drams(),
       item: ItemConfig(
         icon: SizedBox.shrink(),
-        title: "messages",
+        title: "短剧",
         activeForegroundColor: Colors.white, // 选中时的颜色
         inactiveForegroundColor: Colors.grey, // 未选中时的颜色
         textStyle: TextStyle(height: 2),
