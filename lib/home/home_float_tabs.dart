@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shunle/widgets/video_data.dart';
 import '../providers/video_list_provider.dart';
 import '../widgets/short_video_list.dart';
 
@@ -8,7 +8,7 @@ import '../widgets/short_video_list.dart';
 /// 实现透明背景、不占用空间、横向滚动的分类导航
 class HomeFloatTabs extends StatefulWidget {
   final int initialIndex;
-  final List<String> tabs;
+  final List<TabsType> tabs;
   final ValueChanged<int>? onTabChanged;
 
   const HomeFloatTabs({
@@ -35,7 +35,6 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
   @override
   void initState() {
     super.initState();
-    debugPrint('heihei:$kIsWeb.toString()');
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
     // 为每个 Tab 创建对应的 Provider 实例
@@ -52,8 +51,6 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
   @override
   void dispose() {
     _pageController.dispose();
-    debugPrint('dispose');
-    debugPrint('dispose${_providers.values.toString()}');
     // 释放所有 Provider 实例
     for (final provider in _providers.values) {
       provider.dispose();
@@ -96,7 +93,7 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
               physics: const NeverScrollableScrollPhysics(), // 禁止 PageView 手动滑动
               itemCount: widget.tabs.length,
               itemBuilder: (context, index) {
-                return _buildTabContent(widget.tabs[index], index);
+                return _buildTabContent(index);
               },
             ),
           ),
@@ -133,7 +130,7 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
         child: Row(
           children: widget.tabs.asMap().entries.map((entry) {
             final index = entry.key;
-            final title = entry.value;
+            final title = entry.value.title;
             final isSelected = index == _currentIndex;
 
             return InkWell(
@@ -183,12 +180,12 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
   }
 
   /// 构建tab内容（短视频列表）
-  Widget _buildTabContent(String tabTitle, int index) {
+  Widget _buildTabContent(int index) {
     // 使用 ChangeNotifierProvider.value 传入预创建的 Provider 实例
     // 这样切换 Tab 时不会销毁旧 Provider，避免 "already disposed" 错误
     return ChangeNotifierProvider<VideoListProvider>.value(
       value: _providers[index]!,
-      child: ShortVideoList(key: _videoListKeys[index]),
+      child: ShortVideoList(key: _videoListKeys[index], tab: widget.tabs[index]),
     );
   }
 }

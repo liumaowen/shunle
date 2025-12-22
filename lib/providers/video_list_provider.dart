@@ -42,7 +42,11 @@ class VideoListProvider extends ChangeNotifier {
 
   /// 初始化加载视频
   /// 从第一页开始加载
-  Future<void> loadInitialVideos() async {
+  /// 
+  /// 参数:
+  /// - tab: tab单个分类
+  /// 
+  Future<void> loadInitialVideos(TabsType tab) async {
     // 防止重复加载
     if (_loadingState == LoadingState.loading) return;
 
@@ -51,10 +55,17 @@ class VideoListProvider extends ChangeNotifier {
     _videos = [];
     _errorMessage = null;
     notifyListeners();
-
+    String page = _currentPage.toString();
+    if (tab.id == '0') { // 只有推荐频道时，page为空，采用随机页码
+      page = '';
+    }
     try {
       // 调用 API 获取视频
-      final newVideos = await fetchFromAllProviders();
+      final newVideos = await fetchFromAllProviders(
+        page:page,
+        videoType: tab.videoType,
+        sortType: tab.sortType,
+        collectionId: tab.collectionId);
       if (newVideos.isEmpty) {
         _videos = LocalVideoResource.getLocalVideos();
       } else {
@@ -74,7 +85,11 @@ class VideoListProvider extends ChangeNotifier {
 
   /// 加载下一页
   /// 当滚动到倒数第 2 个视频时触发
-  Future<void> loadNextPage() async {
+  /// 
+  /// 参数:
+  /// - tab: tab单个分类
+  /// 
+  Future<void> loadNextPage(TabsType tab) async {
     // 防止重复加载
     if (_loadingState == LoadingState.loading) return;
 
@@ -83,9 +98,16 @@ class VideoListProvider extends ChangeNotifier {
 
     try {
       _currentPage++;
-
+      String page = _currentPage.toString();
+      if (tab.id == '0') { // 只有推荐频道时，page为空，采用随机页码
+        page = '';
+      }
       // 调用 API 获取下一页视频
-      final newVideos = await fetchFromAllProviders();
+      final newVideos = await fetchFromAllProviders(
+        page:page,
+        videoType: tab.videoType,
+        sortType: tab.sortType,
+        collectionId: tab.collectionId);
 
       // 将新视频追加到列表
       _videos.addAll(newVideos);
@@ -110,10 +132,14 @@ class VideoListProvider extends ChangeNotifier {
   }
 
   /// 重试加载（在加载失败时调用）
-  Future<void> retry() async {
+  /// 
+  /// 参数:
+  /// - tab: tab单个分类
+  /// 
+  Future<void> retry(TabsType tab) async {
     _loadingState = LoadingState.idle;
     _errorMessage = null;
     notifyListeners();
-    await loadInitialVideos();
+    await loadInitialVideos(tab);
   }
 }

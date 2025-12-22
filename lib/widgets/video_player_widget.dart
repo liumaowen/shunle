@@ -191,7 +191,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
             const Icon(Icons.error_outline, color: Colors.white, size: 48),
             const SizedBox(height: 16),
             Text(
-              '视频加载失败',
+              '视频加载失败${widget.video.id}',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.white),

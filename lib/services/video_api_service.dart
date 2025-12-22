@@ -122,7 +122,7 @@ class VideoApiService {
           );
 
           // 设置封面 URL
-          element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
+          // element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
         }
         if (dataList.isEmpty) {
           return [];
@@ -209,14 +209,14 @@ List<VideoApiProvider> API_PROVIDERS = [
   VideoApiProviderImpl(
     name: 'Kuaishou',
     enabled: false,
-    fetchFunction: ({collectionId, videoType, sortType}) {
+    fetchFunction: ({page, videoType, sortType,collectionId}) {
       return VideoApiService().fetchVideos(page: 1, size: 10);
     },
   ),
   VideoApiProviderImpl(
     name: 'Mgtv',
-    enabled: true,
-    fetchFunction: ({collectionId, videoType, sortType}) {
+    enabled: false,
+    fetchFunction: ({page, videoType, sortType, collectionId}) {
       int pageindex =
           (Random().nextDouble() *
                   (GlobalConfig.shortVideoRandomMax -
@@ -225,10 +225,11 @@ List<VideoApiProvider> API_PROVIDERS = [
               .floor() +
           GlobalConfig.shortVideoRandomMin;
       Map<String, String> mgtvForm = {
-        'PageIndex': pageindex.toString(),
-        'PageSize': '4',
-        'VideoType': '1',
-        'SortType': '7',
+        'PageIndex': page!.isNotEmpty ? page : pageindex.toString(),
+        'PageSize': '5',
+        'VideoType': videoType?? '',
+        'SortType': sortType?? '0',
+        'CollectionId': collectionId?? '',
       };
       return VideoApiService.fetchMgtvList(mgtvForm);
     },
@@ -238,15 +239,15 @@ List<VideoApiProvider> API_PROVIDERS = [
 /// 从所有启用的 API 提供商获取视频并合并
 /// @param collectionId 收藏ID，用于不同分类的视频获取
 Future<List<VideoData>> fetchFromAllProviders({
-  String? collectionId,
+  String? page,
   String? videoType,
   String? sortType,
+  String? collectionId,
 }) async {
   final enabledProviders = API_PROVIDERS.where((p) => p.enabled).toList();
-
   final futures = enabledProviders.map((provider) async {
     try {
-      final videos = await provider.fetch();
+      final videos = await provider.fetch(page:page, collectionId: collectionId, videoType: videoType, sortType: sortType);
       return {'success': true, 'data': videos, 'provider': provider.name};
     } catch (e) {
       return {'success': false, 'error': e, 'provider': provider.name};

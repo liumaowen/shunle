@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:shunle/widgets/video_data.dart';
 import 'dart:async';
 
 import '../providers/video_list_provider.dart';
@@ -14,7 +15,13 @@ import 'video_player_widget.dart';
 
 /// 短视频列表组件
 class ShortVideoList extends StatefulWidget {
-  const ShortVideoList({super.key});
+  /// tab索引
+  final TabsType tab;
+
+  const ShortVideoList({
+    super.key,
+    required this.tab
+    });
 
   @override
   State<ShortVideoList> createState() => ShortVideoListState();
@@ -67,7 +74,7 @@ class ShortVideoListState extends State<ShortVideoList> {
     // 初始化加载视频
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<VideoListProvider>().loadInitialVideos();
+        context.read<VideoListProvider>().loadInitialVideos(widget.tab);
       }
     });
   }
@@ -115,7 +122,7 @@ class ShortVideoListState extends State<ShortVideoList> {
     // 触发条件：滚动到倒数第 2 个视频且还有更多数据
     debugPrint('当前索引：$_currentIndex 总数：${videos.length} ');
     if (_currentIndex >= videos.length - 2) {
-      provider.loadNextPage();
+      provider.loadNextPage(widget.tab);
     }
   }
 
@@ -211,7 +218,7 @@ class ShortVideoListState extends State<ShortVideoList> {
             provider.loadingState == LoadingState.error) {
           return _buildErrorWidget(
             provider.errorMessage ?? '加载失败',
-            () => provider.retry(),
+            () => provider.retry(widget.tab),
           );
         }
 
@@ -437,7 +444,8 @@ class ShortVideoListState extends State<ShortVideoList> {
 
     // 从当前列表中移除失败的视频
     provider.removeVideo(failedVideo.id);
-
+// debugPrint('failedVideoIndex: ${failedVideoIndex}');
+// debugPrint('_currentIndex: ${_currentIndex}');
     // 如果失败的视频是当前正在播放的视频，跳转到下一个视频
     if (failedVideoIndex == _currentIndex) {
       // 如果有下一个视频，跳转到下一个

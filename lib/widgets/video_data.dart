@@ -102,6 +102,7 @@ abstract class VideoApiProvider {
   ///
   /// 返回视频数据列表
   Future<List<VideoData>> fetch({
+    String? page,
     String? collectionId,
     String? videoType,
     String? sortType,
@@ -117,6 +118,7 @@ class VideoApiProviderImpl implements VideoApiProvider {
   final bool enabled;
 
   final Future<List<VideoData>> Function({
+    String? page,
     String? collectionId,
     String? videoType,
     String? sortType,
@@ -126,6 +128,7 @@ class VideoApiProviderImpl implements VideoApiProvider {
     required this.name,
     required this.enabled,
     required Future<List<VideoData>> Function({
+      String? page,
       String? collectionId,
       String? videoType,
       String? sortType,
@@ -134,15 +137,33 @@ class VideoApiProviderImpl implements VideoApiProvider {
 
   @override
   Future<List<VideoData>> fetch({
+    String? page,
     String? collectionId,
     String? videoType,
     String? sortType,
   }) {
     return _fetchFunction(
+      page: page,
       collectionId: collectionId,
       videoType: videoType,
       sortType: sortType,
     );
   }
+}
+
+class TabsType {
+  final String title;
+  final String id;
+  final String? videoType;
+  final String? sortType;
+  final String? collectionId;
+
+  const TabsType({
+    required this.title,
+    required this.id,
+    this.videoType,
+    this.sortType,
+    this.collectionId,
+  });
 }
 
