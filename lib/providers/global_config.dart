@@ -11,7 +11,7 @@ class Mgtvconfig {
   const Mgtvconfig({
     this.shortVideoRandomMax = 200,
     this.shortVideoRandomMin = 1,
-    this.playDomain = 'https://anceg4a6no1.carlosyzy.com',
+    this.playDomain = 'https://qcwotewlno9.rj2345.com',
     this.initialized = false,
   });
 }

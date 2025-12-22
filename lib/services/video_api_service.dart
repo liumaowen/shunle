@@ -215,7 +215,7 @@ List<VideoApiProvider> API_PROVIDERS = [
   ),
   VideoApiProviderImpl(
     name: 'Mgtv',
-    enabled: false,
+    enabled: true,
     fetchFunction: ({page, videoType, sortType, collectionId}) {
       int pageindex =
           (Random().nextDouble() *

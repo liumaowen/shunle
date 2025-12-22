@@ -69,7 +69,7 @@ class ShortVideoListState extends State<ShortVideoList> {
     _pageController.addListener(_onPageScroll);
 
     // 启动内存清理
-    _startMemoryCleanup();
+    // _startMemoryCleanup();
 
     // 初始化加载视频
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -255,13 +255,15 @@ class ShortVideoListState extends State<ShortVideoList> {
                   if (!_playerKeys.containsKey(index)) {
                     _playerKeys[index] = GlobalKey<VideoPlayerWidgetState>();
                   }
-                  return VideoPlayerWidget(
-                    key: _playerKeys[index],
-                    video: video,
-                    // 只有当前可见的视频才播放
-                    shouldPlay: index == _currentIndex,
-                    // 视频加载失败的回调
-                    onVideoLoadFailed: () => _handleVideoLoadFailed(index),
+                  return Center(
+                    child: VideoPlayerWidget(
+                      key: _playerKeys[index],
+                      video: video,
+                      // 只有当前可见的视频才播放
+                      shouldPlay: index == _currentIndex,
+                      // 视频加载失败的回调
+                      onVideoLoadFailed: () => _handleVideoLoadFailed(index),
+                    ),
                   );
                 } else {
                   // 超出缓存范围的视频显示占位符

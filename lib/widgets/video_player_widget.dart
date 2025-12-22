@@ -414,6 +414,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
     // 必须调用 super.build 以支持 AutomaticKeepAliveClientMixin
@@ -424,95 +425,122 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       return _buildErrorWidget();
     }
 
-    // 使用 Stack 布局，根据状态显示不同内容
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // 基础背景
-        if (_isInitialized)
-          AspectRatio(
-            aspectRatio: _videoController!.value.aspectRatio,
-            child: VideoPlayer(_videoController!),
-          )
-        else if (widget.video.cachedCover != null)
-          _buildCoverImage()
-        else
-          Container(color: Colors.black),
+    // 使用 LayoutBuilder 获取父容器约束
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 基础视频显示组件
+        Widget videoWidget;
 
-        // 视频封面层（仅在初始化前显示）
-        if (!_isInitialized && widget.video.cachedCover != null)
-          _buildCoverImage(),
+        if (_isInitialized) {
+          // 获取视频宽高比
+          double videoRatio = _videoController!.value.aspectRatio;
 
-        // 播放/暂停按钮（仅在初始化后显示）
-        if (_isInitialized)
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                if (_videoController!.value.isPlaying) {
-                  _videoController!.pause();
-                } else {
-                  _videoController!.play();
-                }
-              });
-            },
-            child: Center(
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.9,
-                height: MediaQuery.of(context).size.height * 0.6,
-                decoration: BoxDecoration(color: Colors.transparent),
-                child: AnimatedOpacity(
-                  opacity: _videoController!.value.isPlaying ? 0.0 : 1.0,
-                  duration: const Duration(milliseconds: 80),
-                  child: Icon(
-                    Icons.play_arrow_rounded,
-                    size: 120,
-                    color: Colors.white.withValues(alpha: 0.5),
-                  ),
-                ),
+          // 使用 FittedBox 来强制视频按原始比例显示，防止拉伸
+          videoWidget = FittedBox(
+            fit: BoxFit.contain,  // 保持比例，完整显示视频
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: videoRatio > 1.0 ? constraints.maxWidth : null,
+              height: videoRatio <= 1.0 ? constraints.maxHeight : null,
+              child: AspectRatio(
+                aspectRatio: videoRatio,
+                child: VideoPlayer(_videoController!),
               ),
             ),
-          ),
+          );
+        } else if (widget.video.cachedCover != null) {
+          // 未初始化但有封面
+          videoWidget = _buildCoverImage();
+        } else {
+          // 未初始化且无封面
+          videoWidget = Container(color: Colors.black);
+        }
 
-        // 视频信息叠加层（仅在初始化后显示）
-        if (_isInitialized)
-          Positioned(
-            bottom: 80,
-            left: 16,
-            right: 80,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 视频描述
-                Text(
-                  widget.video.description,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                // 分类标签（如果有）
-                if (widget.video.category.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      '#${widget.video.category}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+        // 使用 Stack 布局，叠加其他UI元素
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // 基础视频组件
+            videoWidget,
+
+            // 视频封面层（仅在初始化前显示）
+            if (!_isInitialized && widget.video.cachedCover != null)
+              Positioned.fill(
+                child: _buildCoverImage(),
+              ),
+
+            // 播放/暂停按钮（仅在初始化后显示）
+            if (_isInitialized)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (_videoController!.value.isPlaying) {
+                      _videoController!.pause();
+                    } else {
+                      _videoController!.play();
+                    }
+                  });
+                },
+                child: Center(
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    decoration: BoxDecoration(color: Colors.transparent),
+                    child: AnimatedOpacity(
+                      opacity: _videoController!.value.isPlaying ? 0.0 : 1.0,
+                      duration: const Duration(milliseconds: 80),
+                      child: Icon(
+                        Icons.play_arrow_rounded,
+                        size: 120,
+                        color: Colors.white.withValues(alpha: 0.5),
                       ),
                     ),
                   ),
-              ],
-            ),
-          ),
+                ),
+              ),
 
-        // 进度条（仅在初始化后显示）
-        if (_isInitialized) _buildProgressBar(),
-      ],
+            // 视频信息叠加层（仅在初始化后显示）
+            if (_isInitialized)
+              Positioned(
+                bottom: 80,
+                left: 16,
+                right: 80,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 视频描述
+                    Text(
+                      widget.video.description,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    // 分类标签（如果有）
+                    if (widget.video.category.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          '#${widget.video.category}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+            // 进度条（仅在初始化后显示）
+            if (_isInitialized) _buildProgressBar(),
+          ],
+        );
+      },
     );
   }
 
