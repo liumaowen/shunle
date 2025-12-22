@@ -1,8 +1,6 @@
 /// 短视频播放器组件
 library;
 
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
