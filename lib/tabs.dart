@@ -1,6 +1,7 @@
 import "dart:ui";
 
 import "package:flutter/material.dart";
+import "package:shunle/drama/drama.dart";
 import "package:shunle/home/home.dart";
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
 
@@ -19,7 +20,7 @@ class Tabs extends StatelessWidget {
       ),
     ),
     PersistentTabConfig(
-      screen: Scaffold(body: Center(child: Text("Messages"))),
+      screen: Drams(),
       item: ItemConfig(
         icon: SizedBox.shrink(),
         title: "messages",

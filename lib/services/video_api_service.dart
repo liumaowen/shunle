@@ -145,6 +145,61 @@ class VideoApiService {
     }
   }
 
+  /// 获取短剧
+  static Future<List<VideoData>> fetchDrama(Map<String, String> dramaForm) async {
+        try {
+      // 获取配置信息
+      final config = GlobalConfig.instance;
+      // 构建 URL
+      final uri = Uri.parse('${GlobalConfig.apiBase}/ShortMovie/ShortMovieList');
+      // 构建请求头
+      final headers = {
+        "authorization": "Bearer null",
+        "Accept": "application/json, text/plain, */*",
+        "x-auth-uuid": UUIDUtils.generateV4(),
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+      };
+      // 直接加密整个 JSON 对象（参考 TypeScript 版本）
+      final String aesform = AesEncryptSimple.encrypt(json.encode(dramaForm));
+      // 发送 POST 请求
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: aesform,
+          )
+          .timeout(timeout);
+      if (response.statusCode == 200) {
+        final text = response.body;
+        // 解密数据
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
+        // 解析 JSON
+        final list99 = json.decode(decryptedPassword);
+        print('list99:$list99');
+
+        // 处理响应数据（参考 TypeScript 版本）
+        if (list99?['data']?['items'] != null) {
+          final List<dynamic> dataList = list99['data']['items'];
+          if (dataList.isNotEmpty) {
+            return dataList.indexed
+                .map(
+                  (item) => VideoData.fromJson(
+                    item.$2 as Map<String, dynamic>,
+                    item.$1,
+                  ),
+                )
+                .toList();
+          }
+        }
+        return [];
+      } else {
+        throw Exception('HTTP 错误: ${response.statusCode}');
+      }
+      }catch (error) {
+        throw Exception('获取drama失败: $error');
+      }
+  }
+
   static Future<Mgtvconfig> getConfig() async {
     try {
       Mgtvconfig mgtvconfig = Mgtvconfig();
@@ -215,7 +270,7 @@ List<VideoApiProvider> API_PROVIDERS = [
   ),
   VideoApiProviderImpl(
     name: 'Mgtv',
-    enabled: true,
+    enabled: false,
     fetchFunction: ({page, videoType, sortType, collectionId}) {
       int pageindex =
           (Random().nextDouble() *
@@ -232,6 +287,19 @@ List<VideoApiProvider> API_PROVIDERS = [
         'CollectionId': collectionId?? '',
       };
       return VideoApiService.fetchMgtvList(mgtvForm);
+    },
+  ),
+  VideoApiProviderImpl(
+    name: 'Drama',
+    enabled: true,
+    fetchFunction: ({page, videoType, sortType, collectionId}) {
+      Map<String, String> mgtvForm = {
+        'PageIndex': '1',  // 保持 int 类型
+        'PageSize': '5',   // 保持 int 类型
+        'ChannelId': '',
+        'GenderChannelType': '',
+      };
+      return VideoApiService.fetchDrama(mgtvForm);
     },
   ),
 ];
