@@ -246,48 +246,48 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
           bottom: 2,
           left: 16,
           right: 16,
-          child: GestureDetector(
-            onTapDown: (details) {
-              // 点击进度条跳转到对应位置
-              if (_videoController != null &&
-                  _videoController!.value.isInitialized) {
-                _handleSeek(details, position, duration);
-              }
-            },
-            onHorizontalDragStart: (details) {
-              _isSeeking = true;
-              _progressHeight = 8.0;
-              _borderRadius = 8;
-              _updateSeekingUI();
-            },
-            onHorizontalDragUpdate: (details) {
-              // 拖动进度条
-              if (_videoController != null &&
-                  _videoController!.value.isInitialized) {
-                _handleDragUpdate(details, duration);
-              }
-            },
-            onHorizontalDragEnd: (details) {
-              _isSeeking = false;
-              _progressHeight = 1.0;
-              _borderRadius = 1;
-              _updateSeekingUI();
-            },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 时间显示
-                _buildTimeDisplay(position, duration),
-                const SizedBox(height: 8),
-                // 进度条容器 - 增加触摸区域
-                SizedBox(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 时间显示
+              _buildTimeDisplay(position, duration),
+              const SizedBox(height: 8),
+              // 进度条容器 - 增加触摸区域
+              GestureDetector(
+                onTapDown: (details) {
+                  // 点击进度条跳转到对应位置
+                  if (_videoController != null &&
+                      _videoController!.value.isInitialized) {
+                    _handleSeek(details, position, duration);
+                  }
+                },
+                onHorizontalDragStart: (details) {
+                  _isSeeking = true;
+                  _progressHeight = 8.0;
+                  _borderRadius = 8;
+                  _updateSeekingUI();
+                },
+                onHorizontalDragUpdate: (details) {
+                  // 拖动进度条
+                  if (_videoController != null &&
+                      _videoController!.value.isInitialized) {
+                    _handleDragUpdate(details, duration);
+                  }
+                },
+                onHorizontalDragEnd: (details) {
+                  _isSeeking = false;
+                  _progressHeight = 1.0;
+                  _borderRadius = 1;
+                  _updateSeekingUI();
+                },
+                child: SizedBox(
                   // 触摸区域高度（比显示高度大）
                   height: 20, // 触摸区域高度
                   // 实际显示的进度条高度
                   child: _buildProgressBarStack(progress, screenWidth),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -495,13 +495,14 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                   ),
                 ),
               ),
-
+            // 进度条（仅在初始化后显示）
+            if (_isInitialized) _buildProgressBar(),
             // 视频信息叠加层（仅在初始化后显示）
-            if (_isInitialized)
+            if (_isInitialized && !_isSeeking)
               Positioned(
-                bottom: 80,
+                bottom: 26,
                 left: 16,
-                right: 80,
+                right: 16,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -529,12 +530,11 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                           ),
                         ),
                       ),
+                    if (_isInitialized && widget.video.episodeCount > 1)
+                      _episodeCountBar(),
                   ],
                 ),
               ),
-            if (widget.video.episodeCount > 1) _episodeCountBar(),
-            // 进度条（仅在初始化后显示）
-            if (_isInitialized) _buildProgressBar(),
           ],
         );
       },
@@ -543,16 +543,37 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
   /// 构建集数行
   Widget _episodeCountBar() {
-    return Positioned(
-      bottom: 60,
-      left: 16,
-      right: 16,
-      child: Center(
-        child: Text(
-          '观看完整短剧·全${widget.video.episodeCount}集',
-          style: const TextStyle(color: Colors.white, fontSize: 16),
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: () {
+            debugPrint('跳转到集数列表页面');
+            // 跳转到集数列表页面
+            // Navigator.of(context).push(
+            //   MaterialPageRoute(
+            //     builder: (context) => EpisodeListPage(
+            //       video: widget.video,
+            //     ),
+            //   ),
+            // );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Center(
+              child: Text(
+                '观看完整短剧·全${widget.video.episodeCount}集',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
