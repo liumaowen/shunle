@@ -12,15 +12,28 @@ import '../providers/video_list_provider.dart';
 import '../utils/cover_cache_manager.dart';
 import '../utils/crypto/aes_encrypt_simple.dart';
 import 'video_player_widget.dart';
+import 'episode_selector_dialog.dart';
 
 /// 短视频列表组件
 class ShortVideoList extends StatefulWidget {
   /// tab索引
   final TabsType tab;
 
+  /// 是否显示集数控制按钮
+  final bool showEpisodeControls;
+
+  /// 短剧点击回调
+  final Function(VideoData)? onDramaTap;
+
+  /// 集数切换回调
+  final Function(int)? onEpisodeChange;
+
   const ShortVideoList({
     super.key,
-    required this.tab
+    required this.tab,
+    this.showEpisodeControls = false,
+    this.onDramaTap,
+    this.onEpisodeChange,
     });
 
   @override
@@ -42,6 +55,132 @@ class ShortVideoListState extends State<ShortVideoList> {
   /// 播放当前视频
   void playCurrentVideo() {
     _playerKeys[_currentIndex]?.currentState?.play();
+  }
+
+  /// 根据视频类型构建不同的视频项目
+  Widget _buildVideoItem(VideoData video, int index) {
+    if (video.isDrama) {
+      return _buildDramaItem(video, index);
+    } else {
+      return _buildNormalVideoItem(video, index);
+    }
+  }
+
+  /// 构建普通视频项目
+  Widget _buildNormalVideoItem(VideoData video, int index) {
+    return Center(
+      child: VideoPlayerWidget(
+        key: _playerKeys[index],
+        video: video,
+        // 只有当前可见的视频才播放
+        shouldPlay: index == _currentIndex,
+        // 视频加载失败的回调
+        onVideoLoadFailed: () => _handleVideoLoadFailed(index),
+      ),
+    );
+  }
+
+  /// 构建短剧项目
+  Widget _buildDramaItem(VideoData drama, int index) {
+    return Stack(
+      children: [
+        Center(
+          child: VideoPlayerWidget(
+            key: _playerKeys[index],
+            video: drama,
+            // 只有当前可见的视频才播放
+            shouldPlay: index == _currentIndex,
+            // 视频加载失败的回调
+            onVideoLoadFailed: () => _handleVideoLoadFailed(index),
+            // 短剧相关参数
+            isDrama: true,
+            totalEpisodes: drama.totalEpisodes,
+            currentEpisode: drama.currentEpisode,
+            onEpisodeChange: (episodeNumber) {
+              _handleEpisodeChange(drama, episodeNumber);
+            },
+          ),
+        ),
+        // 短剧信息覆盖层
+        if (widget.showEpisodeControls)
+          _buildDramaOverlay(drama, index),
+      ],
+    );
+  }
+
+  /// 构建短剧信息覆盖层
+  Widget _buildDramaOverlay(VideoData drama, int index) {
+    return Positioned(
+      bottom: 60,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        color: Colors.black54,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              drama.description,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '第${drama.currentEpisode}/${drama.totalEpisodes}集',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                // 集数选择按钮
+                ElevatedButton(
+                  onPressed: () => _showEpisodeSelector(drama),
+                  child: const Text('选集'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 显示集数选择器
+  void _showEpisodeSelector(VideoData drama) {
+    showDialog(
+      context: context,
+      builder: (context) => EpisodeSelectorDialog(
+        episodes: drama.episodes ?? [],
+        currentEpisode: drama.currentEpisode ?? 1,
+        onEpisodeSelected: (episode) {
+          Navigator.of(context).pop();
+          _handleEpisodeChange(drama, episode.episodeNumber);
+        },
+      ),
+    );
+  }
+
+  /// 处理集数切换
+  void _handleEpisodeChange(VideoData drama, int episodeNumber) {
+    // 更新短剧的当前集数
+    setState(() {
+      drama.currentEpisode = episodeNumber;
+    });
+
+    // 通知外部集数已切换
+    widget.onEpisodeChange?.call(episodeNumber - 1); // 转换为 0-based 索引
+
+    // 重新加载当前视频
+    _playerKeys[_currentIndex]?.currentState?.loadVideo(drama);
   }
 
   /// 缓存范围：保活当前视频和前后各 N 个视频
@@ -255,16 +394,8 @@ class ShortVideoListState extends State<ShortVideoList> {
                   if (!_playerKeys.containsKey(index)) {
                     _playerKeys[index] = GlobalKey<VideoPlayerWidgetState>();
                   }
-                  return Center(
-                    child: VideoPlayerWidget(
-                      key: _playerKeys[index],
-                      video: video,
-                      // 只有当前可见的视频才播放
-                      shouldPlay: index == _currentIndex,
-                      // 视频加载失败的回调
-                      onVideoLoadFailed: () => _handleVideoLoadFailed(index),
-                    ),
-                  );
+
+                  return _buildVideoItem(video, index);
                 } else {
                   // 超出缓存范围的视频显示占位符
                   return Container(

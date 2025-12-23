@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
+import 'package:shunle/drama/drama_detail_page.dart';
 import 'package:video_player/video_player.dart';
 import 'video_data.dart';
 import '../utils/crypto/aes_encrypt_simple.dart';
@@ -20,11 +22,27 @@ class VideoPlayerWidget extends StatefulWidget {
   /// 视频加载失败的回调
   final VoidCallback? onVideoLoadFailed;
 
+  /// 是否为短剧
+  final bool isDrama;
+
+  /// 总集数
+  final int? totalEpisodes;
+
+  /// 当前集数
+  final int? currentEpisode;
+
+  /// 集数切换回调
+  final Function(int)? onEpisodeChange;
+
   const VideoPlayerWidget({
     super.key,
     required this.video,
     required this.shouldPlay,
     this.onVideoLoadFailed,
+    this.isDrama = false,
+    this.totalEpisodes,
+    this.currentEpisode,
+    this.onEpisodeChange,
   });
 
   @override
@@ -79,7 +97,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
       // 创建视频播放器控制器
       // 支持本地视频（assets/ 前缀）和网络视频（http/https）
-      var videoUrl = widget.video.videoUrl ?? '';
+      var videoUrl = widget.video.videoUrl;
       if (videoUrl.startsWith('assets/')) {
         // 本地视频：使用 asset 路径
         // 移除 'assets/' 前缀，因为 asset() 会自动处理
@@ -403,6 +421,23 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  /// 重新加载视频
+  void loadVideo(VideoData newVideo) {
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      _videoController!.pause();
+      _videoController!.dispose();
+    }
+
+    setState(() {
+      _videoController = null;
+      _isInitialized = false;
+      _hasError = false;
+      _currentPosition = Duration.zero;
+    });
+
+    _initializePlayer();
+  }
+
   @override
   void dispose() {
     // 释放播放器资源
@@ -497,6 +532,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
               ),
             // 进度条（仅在初始化后显示）
             if (_isInitialized) _buildProgressBar(),
+            // 短剧集数控制（仅在初始化后且为短剧时显示）
+            if (_isInitialized && widget.isDrama) _buildEpisodeControls(),
             // 视频信息叠加层（仅在初始化后显示）
             if (_isInitialized && !_isSeeking)
               Positioned(
@@ -530,7 +567,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                           ),
                         ),
                       ),
-                    if (_isInitialized && widget.video.episodeCount > 1)
+                    if (_isInitialized &&
+                        widget.video.totalEpisodes != null &&
+                        widget.video.totalEpisodes! > 1)
                       _episodeCountBar(),
                   ],
                 ),
@@ -541,6 +580,80 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     );
   }
 
+  /// 构建短剧集数控制器
+  Widget _buildEpisodeControls() {
+    return Positioned(
+      top: 50,
+      right: 10,
+      child: Column(
+        children: [
+          // 上一集按钮
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.skip_previous, color: Colors.white),
+              onPressed: widget.currentEpisode! > 1
+                  ? _playPreviousEpisode
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 集数显示
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '第${widget.currentEpisode}/${widget.totalEpisodes}集',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 下一集按钮
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.skip_next, color: Colors.white),
+              onPressed: widget.currentEpisode! < widget.totalEpisodes!
+                  ? _playNextEpisode
+                  : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 播放上一集
+  void _playPreviousEpisode() {
+    if (widget.currentEpisode! > 1) {
+      widget.onEpisodeChange?.call(widget.currentEpisode! - 1);
+    }
+  }
+
+  /// 播放下一集
+  void _playNextEpisode() {
+    if (widget.currentEpisode! < widget.totalEpisodes!) {
+      widget.onEpisodeChange?.call(widget.currentEpisode! + 1);
+    }
+  }
+
   /// 构建集数行
   Widget _episodeCountBar() {
     return Column(
@@ -549,25 +662,25 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         GestureDetector(
           onTap: () {
             debugPrint('跳转到集数列表页面');
-            // 跳转到集数列表页面
-            // Navigator.of(context).push(
-            //   MaterialPageRoute(
-            //     builder: (context) => EpisodeListPage(
-            //       video: widget.video,
-            //     ),
-            //   ),
-            // );
+            pushScreen(
+              context,
+              screen: DramaDetailPage(dramaId: widget.video.id),
+              pageTransitionAnimation: PageTransitionAnimation.platform,
+            );
+            if (_videoController!.value.isPlaying) {
+              _videoController!.pause();
+            }
           },
           child: Container(
             padding: const EdgeInsets.all(8),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Center(
               child: Text(
-                '观看完整短剧·全${widget.video.episodeCount}集',
+                '观看完整短剧·全${widget.video.totalEpisodes}集',
                 style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
             ),

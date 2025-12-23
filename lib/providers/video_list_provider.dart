@@ -11,9 +11,6 @@ enum LoadingState { idle, loading, error }
 /// 视频列表状态管理类
 /// 使用 Provider 管理视频列表数据、分页逻辑和加载状态
 class VideoListProvider extends ChangeNotifier {
-  /// API 服务实例
-  final VideoApiService _apiService = VideoApiService();
-
   /// 视频列表
   List<VideoData> _videos = [];
   List<VideoData> get videos => List.unmodifiable(_videos);
@@ -26,7 +23,7 @@ class VideoListProvider extends ChangeNotifier {
   int _currentPage = 1;
 
   /// 每页数量
-  final int _pageSize = 10;
+  final int _pageSize = 5;
 
   /// 加载状态
   LoadingState _loadingState = LoadingState.idle;
@@ -42,10 +39,10 @@ class VideoListProvider extends ChangeNotifier {
 
   /// 初始化加载视频
   /// 从第一页开始加载
-  /// 
+  ///
   /// 参数:
   /// - tab: tab单个分类
-  /// 
+  ///
   Future<void> loadInitialVideos(TabsType tab) async {
     // 防止重复加载
     if (_loadingState == LoadingState.loading) return;
@@ -55,25 +52,44 @@ class VideoListProvider extends ChangeNotifier {
     _videos = [];
     _errorMessage = null;
     notifyListeners();
+
     String page = _currentPage.toString();
-    if (tab.id == '0') { // 只有推荐频道时，page为空，采用随机页码
+    if (tab.id == '0') {
+      // 只有推荐频道时，page为空，采用随机页码
       page = '';
     }
+
     try {
-      // 调用 API 获取视频
-      final newVideos = await fetchFromAllProviders(
-        page:page,
-        videoType: tab.videoType,
-        sortType: tab.sortType,
-        collectionId: tab.collectionId);
-      if (newVideos.isEmpty) {
-        _videos = LocalVideoResource.getLocalVideos();
-      } else {
+      final newVideos = [];
+      // 判断是否为短剧类型
+      if (tab.isDramaType) {
+        // 短剧数据加载逻辑
+        Map<String, String> dramaForm = {
+          'PageIndex': page,
+          'PageSize': _pageSize.toString(),
+          'ChannelId': '',
+          'GenderChannelType': '',
+        };
+        final newVideos = await VideoApiService.fetchDrama(dramaForm);
         _videos = newVideos;
+      } else {
+        // 普通视频数据加载逻辑
+        final newVideos = await VideoApiService.fetchFromAllProviders(
+          page: page,
+          pagesize: _pageSize.toString(),
+          videoType: tab.videoType,
+          sortType: tab.sortType,
+          collectionId: tab.collectionId,
+        );
+        if (newVideos.isEmpty) {
+          _videos = LocalVideoResource.getLocalVideos();
+        } else {
+          _videos = newVideos;
+        }
       }
 
       // 检查是否还有更多数据
-      // _hasMore = newVideos.length >= _pageSize;
+      _hasMore = newVideos.length >= _pageSize;
       _loadingState = LoadingState.idle;
       notifyListeners();
     } catch (e) {
@@ -85,10 +101,10 @@ class VideoListProvider extends ChangeNotifier {
 
   /// 加载下一页
   /// 当滚动到倒数第 2 个视频时触发
-  /// 
+  ///
   /// 参数:
   /// - tab: tab单个分类
-  /// 
+  ///
   Future<void> loadNextPage(TabsType tab) async {
     // 防止重复加载
     if (_loadingState == LoadingState.loading) return;
@@ -99,15 +115,17 @@ class VideoListProvider extends ChangeNotifier {
     try {
       _currentPage++;
       String page = _currentPage.toString();
-      if (tab.id == '0') { // 只有推荐频道时，page为空，采用随机页码
+      if (tab.id == '0') {
+        // 只有推荐频道时，page为空，采用随机页码
         page = '';
       }
       // 调用 API 获取下一页视频
-      final newVideos = await fetchFromAllProviders(
-        page:page,
+      final newVideos = await VideoApiService.fetchFromAllProviders(
+        page: page,
         videoType: tab.videoType,
         sortType: tab.sortType,
-        collectionId: tab.collectionId);
+        collectionId: tab.collectionId,
+      );
 
       // 将新视频追加到列表
       _videos.addAll(newVideos);
@@ -131,15 +149,42 @@ class VideoListProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 设置视频列表（内部使用）
+  void setVideos(List<VideoData> videos) {
+    _videos = videos;
+    notifyListeners();
+  }
+
   /// 重试加载（在加载失败时调用）
-  /// 
+  ///
   /// 参数:
   /// - tab: tab单个分类
-  /// 
+  ///
   Future<void> retry(TabsType tab) async {
     _loadingState = LoadingState.idle;
     _errorMessage = null;
     notifyListeners();
     await loadInitialVideos(tab);
   }
+
+  /// 获取短剧详情
+  ///
+  /// 注意：此方法已废弃，请使用 DramaProvider 来处理短剧相关状态
+  /// 这里保持兼容性，但会清空当前视频列表
+  ///
+  /// 参数:
+  /// - dramaId: 短剧ID
+  ///
+  /// 返回:
+  /// - VideoData 包含完整的集数列表
+  ///
+  @Deprecated("请使用 DramaProvider 来处理短剧相关状态，这里保持兼容性但会清空当前视频列表")
+  Future<void> getDramaDetail(String dramaId) async {
+    final newVideos = await VideoApiService.getDramaDetail(dramaId);
+    _videos = newVideos;
+    notifyListeners();
+  }
+
+  /// 检查是否为短剧数据加载
+  bool get isDramaMode => _videos.isNotEmpty && _videos.first.isDrama;
 }
