@@ -99,6 +99,12 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         pause();
       }
     }
+
+    // 步骤1：检测视频 URL 是否变化，如果变化则重新加载
+    if (widget.video.videoUrl != oldWidget.video.videoUrl) {
+      debugPrint('视频 URL 已变化，重新加载: ${widget.video.videoUrl}');
+      loadVideo(widget.video);
+    }
   }
 
   /// 初始化视频播放器

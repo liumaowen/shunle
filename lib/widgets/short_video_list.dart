@@ -616,6 +616,13 @@ class ShortVideoListState extends State<ShortVideoList> {
             // 将数据存储到 VideoData 中
             nextVideo.setvideourl = palyData;
             debugPrint("nextVideoUrl新: $palyData");
+
+            // 步骤2：强制重新加载下一个视频播放器
+            debugPrint('强制重新加载下一个视频播放器，索引: ${currenVideoIndex + 1}');
+            final nextPlayerKey = _playerKeys[currenVideoIndex + 1];
+            if (nextPlayerKey?.currentState != null) {
+              nextPlayerKey!.currentState!.loadVideo(nextVideo);
+            }
           } catch (e) {
             debugPrint('预加载视频失败: ${nextVideo.playUrl}, 错误: $e');
           }
