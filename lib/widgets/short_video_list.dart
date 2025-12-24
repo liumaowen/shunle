@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:shunle/providers/global_config.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'dart:async';
 
@@ -12,15 +13,32 @@ import '../providers/video_list_provider.dart';
 import '../utils/cover_cache_manager.dart';
 import '../utils/crypto/aes_encrypt_simple.dart';
 import 'video_player_widget.dart';
+import 'episode_selector_dialog.dart';
 
 /// 短视频列表组件
 class ShortVideoList extends StatefulWidget {
   /// tab索引
   final TabsType tab;
 
+  /// 短剧id
+  final String? dramaId;
+
+  /// 是否显示集数控制按钮
+  final bool showEpisodeControls;
+
+  /// 短剧点击回调
+  final Function(VideoData)? onDramaTap;
+
+  /// 集数切换回调
+  final Function(int)? onEpisodeChange;
+
   const ShortVideoList({
     super.key,
-    required this.tab
+    required this.tab,
+    this.dramaId,
+    this.showEpisodeControls = false,
+    this.onDramaTap,
+    this.onEpisodeChange,
     });
 
   @override
@@ -44,6 +62,136 @@ class ShortVideoListState extends State<ShortVideoList> {
     _playerKeys[_currentIndex]?.currentState?.play();
   }
 
+  /// 根据视频类型构建不同的视频项目
+  Widget _buildVideoItem(VideoData video, int index,int len) {
+    if (video.isDrama) {
+      return _buildDramaItem(video, index,len);
+    } else {
+      return _buildNormalVideoItem(video, index,len);
+    }
+  }
+
+  /// 构建普通视频项目
+  Widget _buildNormalVideoItem(VideoData video, int index,int len) {
+    return Center(
+      child: VideoPlayerWidget(
+        key: _playerKeys[index],
+        len: len,
+        video: video,
+        // 只有当前可见的视频才播放
+        shouldPlay: index == _currentIndex,
+        // 视频加载失败的回调
+        onVideoLoadFailed: () => _handleVideoLoadFailed(index),
+        // 播放完成前10秒的回调
+        onVideoPlayBefore10: () => _handleVideoPlayBefore10(index),
+      ),
+    );
+  }
+
+  /// 构建短剧项目
+  Widget _buildDramaItem(VideoData drama, int index,len) {
+    return Stack(
+      children: [
+        Center(
+          child: VideoPlayerWidget(
+            key: _playerKeys[index],
+            len: len,
+            video: drama,
+            // 只有当前可见的视频才播放
+            shouldPlay: index == _currentIndex,
+            // 视频加载失败的回调
+            onVideoLoadFailed: () => _handleVideoLoadFailed(index),
+            // 短剧相关参数
+            isDrama: true,
+            totalEpisodes: drama.totalEpisodes,
+            currentEpisode: drama.currentEpisode,
+            onEpisodeChange: (episodeNumber) {
+              _handleEpisodeChange(drama, episodeNumber);
+            },
+          ),
+        ),
+        // 短剧信息覆盖层
+        if (widget.showEpisodeControls)
+          _buildDramaOverlay(drama, index),
+      ],
+    );
+  }
+
+  /// 构建短剧信息覆盖层
+  Widget _buildDramaOverlay(VideoData drama, int index) {
+    return Positioned(
+      bottom: 60,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        color: Colors.black54,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              drama.description,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '第${drama.currentEpisode}/${drama.totalEpisodes}集',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                // 集数选择按钮
+                ElevatedButton(
+                  onPressed: () => _showEpisodeSelector(drama),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('选集'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 显示集数选择器
+  void _showEpisodeSelector(VideoData drama) {
+    showDialog(
+      context: context,
+      builder: (context) => EpisodeSelectorDialog(
+        episodes: drama.episodes ?? [],
+        currentEpisode: drama.currentEpisode ?? 1,
+        onEpisodeSelected: (episode) {
+          Navigator.of(context).pop();
+          _handleEpisodeChange(drama, episode.episodeNumber);
+        },
+      ),
+    );
+  }
+
+  /// 处理集数切换
+  void _handleEpisodeChange(VideoData drama, int episodeNumber) {
+    // 更新短剧的当前集数
+    setState(() {
+      drama.currentEpisode = episodeNumber;
+    });
+
+    // 通知外部集数已切换
+    widget.onEpisodeChange?.call(episodeNumber - 1); // 转换为 0-based 索引
+
+    // 重新加载当前视频
+    _playerKeys[_currentIndex]?.currentState?.loadVideo(drama);
+  }
+
   /// 缓存范围：保活当前视频和前后各 N 个视频
   /// 例如：_cacheRange = 2 时，同时保活 5 个视频（当前 + 前2 + 后2）
   /// 可根据设备性能和内存情况调整：1-3 推荐
@@ -59,7 +207,7 @@ class ShortVideoListState extends State<ShortVideoList> {
   Timer? _preloadTimer;
 
   /// 预加载范围：接下来预加载的视频数量
-  static const int _preloadRange = 3;
+  static const int _preloadRange = 2;
 
   @override
   void initState() {
@@ -74,7 +222,7 @@ class ShortVideoListState extends State<ShortVideoList> {
     // 初始化加载视频
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<VideoListProvider>().loadInitialVideos(widget.tab);
+        context.read<VideoListProvider>().loadInitialVideos(widget.tab,widget.dramaId);
       }
     });
   }
@@ -121,7 +269,7 @@ class ShortVideoListState extends State<ShortVideoList> {
     final videos = provider.videos;
     // 触发条件：滚动到倒数第 2 个视频且还有更多数据
     debugPrint('当前索引：$_currentIndex 总数：${videos.length} ');
-    if (_currentIndex >= videos.length - 2) {
+    if (_currentIndex >= videos.length - 2 && provider.hasMore) {
       provider.loadNextPage(widget.tab);
     }
   }
@@ -160,26 +308,44 @@ class ShortVideoListState extends State<ShortVideoList> {
     _preloadTimer = Timer(const Duration(milliseconds: 200), () {
       final provider = context.read<VideoListProvider>();
       final videos = provider.videos;
-
+      // 获取配置信息
+      final config = GlobalConfig.instance;
       // 预加载当前索引之后 _preloadRange 个视频的封面
       final startIndex = _currentIndex + 1;
       final endIndex = (startIndex + _preloadRange).clamp(0, videos.length - 1);
 
       for (int i = startIndex; i <= endIndex; i++) {
         final video = videos[i];
-        if (video.coverUrl.isNotEmpty &&
-            !CoverCacheManager().isCached(video.coverUrl)) {
+        // if (video.coverUrl.isNotEmpty &&
+        //     !CoverCacheManager().isCached(video.coverUrl)) {
+        //   // 使用 Future 在后台线程执行解密和缓存
+        //   Future.microtask(() async {
+        //     try {
+        //       final coverData = await AesEncryptSimple.fetchAndDecrypt(
+        //         video.coverUrl,
+        //       );
+        //       CoverCacheManager().addToCache(video.coverUrl, coverData);
+        //       // 将数据存储到 VideoData 中
+        //       video.cachedCover = coverData;
+        //     } catch (e) {
+        //       debugPrint('预加载封面失败: ${video.coverUrl}, 错误: $e');
+        //     }
+        //   });
+        // }
+        if (video.playUrl != null && video.playUrl!.isNotEmpty &&
+            !CoverCacheManager().isPlayCached(video.playUrl!)) {
           // 使用 Future 在后台线程执行解密和缓存
           Future.microtask(() async {
             try {
-              final coverData = await AesEncryptSimple.fetchAndDecrypt(
-                video.coverUrl,
+              final palyData = AesEncryptSimple.getm3u8(
+                config.playDomain,
+                video.playUrl!
               );
-              CoverCacheManager().addToCache(video.coverUrl, coverData);
+              CoverCacheManager().addToPlayCache(video.playUrl!, palyData);
               // 将数据存储到 VideoData 中
-              video.cachedCover = coverData;
+              video.setvideourl = palyData;
             } catch (e) {
-              debugPrint('预加载封面失败: ${video.coverUrl}, 错误: $e');
+              debugPrint('预加载视频失败: ${video.coverUrl}, 错误: $e');
             }
           });
         }
@@ -218,7 +384,7 @@ class ShortVideoListState extends State<ShortVideoList> {
             provider.loadingState == LoadingState.error) {
           return _buildErrorWidget(
             provider.errorMessage ?? '加载失败',
-            () => provider.retry(widget.tab),
+            () => provider.retry(widget.tab,widget.dramaId),
           );
         }
 
@@ -235,7 +401,7 @@ class ShortVideoListState extends State<ShortVideoList> {
               physics: const PageScrollPhysics(), // web 滑动
               onPageChanged: _onPageChanged,
               // 如果还有更多数据，itemCount 加 1 用于显示加载指示器
-              itemCount: provider.videos.length + 1,
+              itemCount: provider.videos.length + (provider.hasMore ? 1 : 0),
               allowImplicitScrolling: true,
               itemBuilder: (context, index) {
                 // 最后一项显示加载指示器（当还有更多数据时）
@@ -255,16 +421,8 @@ class ShortVideoListState extends State<ShortVideoList> {
                   if (!_playerKeys.containsKey(index)) {
                     _playerKeys[index] = GlobalKey<VideoPlayerWidgetState>();
                   }
-                  return Center(
-                    child: VideoPlayerWidget(
-                      key: _playerKeys[index],
-                      video: video,
-                      // 只有当前可见的视频才播放
-                      shouldPlay: index == _currentIndex,
-                      // 视频加载失败的回调
-                      onVideoLoadFailed: () => _handleVideoLoadFailed(index),
-                    ),
-                  );
+
+                  return _buildVideoItem(video, index,provider.videos.length);
                 } else {
                   // 超出缓存范围的视频显示占位符
                   return Container(
@@ -436,6 +594,36 @@ class ShortVideoListState extends State<ShortVideoList> {
     }
   }
 
+  /// 播放完成前10秒处理下一个视频是否有效
+  void _handleVideoPlayBefore10(int currenVideoIndex) async {
+    final provider = context.read<VideoListProvider>();
+    if (provider.videos.length > currenVideoIndex + 1) {
+      // 获取配置信息
+      final config = GlobalConfig.instance;
+      final nextVideo = provider.videos[currenVideoIndex + 1];
+      bool isVideoUrlValid = await provider.isVideoUrlValid(nextVideo.videoUrl);
+      debugPrint("isVideoUrlValid: $isVideoUrlValid");
+      debugPrint("nextVideoUrl旧: ${nextVideo.videoUrl}");
+      if (!isVideoUrlValid) {
+        // 使用 Future 在后台线程执行解密和缓存
+        Future.microtask(() async {
+          try {
+            final palyData = AesEncryptSimple.getm3u8(
+              config.playDomain,
+              nextVideo.playUrl!
+            );
+            CoverCacheManager().addToPlayCache(nextVideo.playUrl!, palyData);
+            // 将数据存储到 VideoData 中
+            nextVideo.setvideourl = palyData;
+            debugPrint("nextVideoUrl新: $palyData");
+          } catch (e) {
+            debugPrint('预加载视频失败: ${nextVideo.playUrl}, 错误: $e');
+          }
+        });
+      }
+    }
+
+  }
   /// 处理视频加载失败
   void _handleVideoLoadFailed(int failedVideoIndex) {
     final provider = context.read<VideoListProvider>();

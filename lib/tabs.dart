@@ -7,7 +7,7 @@ import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
 
 class Tabs extends StatelessWidget {
   Tabs({super.key});
-
+final PersistentTabController _tabController = PersistentTabController(initialIndex: 0);
   final List<PersistentTabConfig> _tabs = [
     PersistentTabConfig(
       screen: Home(),
@@ -20,6 +20,7 @@ class Tabs extends StatelessWidget {
       ),
     ),
     PersistentTabConfig(
+      // screen: Scaffold(body: Center(child: Text("短剧"))),
       screen: Drams(),
       item: ItemConfig(
         icon: SizedBox.shrink(),
@@ -40,6 +41,10 @@ class Tabs extends StatelessWidget {
       ),
     ),
   ];
+
+  void _onItemTapped(int index) {
+    debugPrint('点击了第 $index 个选项卡');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +67,8 @@ class Tabs extends StatelessWidget {
       // home: VerticalPageDemo(),
       home: PersistentTabView(
         tabs: _tabs,
+        controller: _tabController,
+        onTabChanged:(value) => _onItemTapped(value),
         navBarBuilder: (navBarConfig) => Style1BottomNavBar(
           navBarConfig: navBarConfig,
           navBarDecoration: NavBarDecoration(

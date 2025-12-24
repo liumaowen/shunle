@@ -1,8 +1,13 @@
 /// 短视频播放器组件
 library;
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
+import 'package:shunle/drama/drama_detail_page.dart';
+import 'package:shunle/providers/global_config.dart';
 import 'package:video_player/video_player.dart';
 import 'video_data.dart';
 import '../utils/crypto/aes_encrypt_simple.dart';
@@ -11,6 +16,8 @@ import '../utils/cover_cache_manager.dart';
 /// 视频播放器 Widget
 /// 使用 VideoPlayer 实现视频播放，自定义 UI 控制
 class VideoPlayerWidget extends StatefulWidget {
+  /// 测试视频数据
+  final int len;
   /// 视频数据
   final VideoData video;
 
@@ -20,11 +27,32 @@ class VideoPlayerWidget extends StatefulWidget {
   /// 视频加载失败的回调
   final VoidCallback? onVideoLoadFailed;
 
+  /// 视频播放完成前10秒回调
+  final VoidCallback? onVideoPlayBefore10;
+
+  /// 是否为短剧
+  final bool isDrama;
+
+  /// 总集数
+  final int? totalEpisodes;
+
+  /// 当前集数
+  final int? currentEpisode;
+
+  /// 集数切换回调
+  final Function(int)? onEpisodeChange;
+
   const VideoPlayerWidget({
     super.key,
+    required this.len,
     required this.video,
     required this.shouldPlay,
     this.onVideoLoadFailed,
+    this.onVideoPlayBefore10,
+    this.isDrama = false,
+    this.totalEpisodes,
+    this.currentEpisode,
+    this.onEpisodeChange,
   });
 
   @override
@@ -45,6 +73,10 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   bool _isSeeking = false;
   double _progressHeight = 1.0;
   double _borderRadius = 1.0;
+
+  // 防抖 Timer
+  Timer? _before10Timer;
+  bool _hasTriggeredBefore10Callback = false;
 
   @override
   void initState() {
@@ -72,14 +104,20 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   /// 初始化视频播放器
   Future<void> _initializePlayer() async {
     try {
-      // 异步加载封面数据，避免阻塞主线程
-      if (widget.video.coverUrl.isNotEmpty) {
-        _loadCoverAsync();
+        if(widget.video.needJiemi!) {
+        // 异步加载封面数据，避免阻塞主线程
+        if (widget.video.coverUrl.isNotEmpty) {
+          // _loadCoverAsync();
+        }
+        // 异步加载封面数据，避免阻塞主线程
+        if (widget.video.playUrl != null && widget.video.playUrl!.isNotEmpty) {
+          _loadPlayAsync();
+        }
       }
 
       // 创建视频播放器控制器
       // 支持本地视频（assets/ 前缀）和网络视频（http/https）
-      var videoUrl = widget.video.videoUrl ?? '';
+      var videoUrl = widget.video.videoUrl;
       if (videoUrl.startsWith('assets/')) {
         // 本地视频：使用 asset 路径
         // 移除 'assets/' 前缀，因为 asset() 会自动处理
@@ -129,6 +167,33 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       if (newPosition != _currentPosition) {
         _currentPosition = newPosition;
         _positionNotifier.value = newPosition; // 通知监听器，不触发重建
+
+        // 检查是否需要触发前10秒回调
+        final duration = _videoController!.value.duration;
+        if (duration.inSeconds > 10) {  // 确保视频时长超过10秒
+          final befor10 = duration.inSeconds - 10;
+          final currseconds = _currentPosition.inSeconds;
+          bool needjiemi = widget.video.needJiemi ?? false;
+
+          debugPrint("当前位置：${currseconds}");
+          debugPrint("总时长：${duration.inSeconds}");
+          debugPrint("是否需要解密：$needjiemi");
+          debugPrint("befor10：$befor10");
+
+          /// 在播放完毕前10秒时，判断下一个视频是否有效
+          if (needjiemi && (currseconds == befor10)) {
+            debugPrint("触发前10秒回调");
+
+            // 防抖：如果500ms内多次触发，只执行最后一次
+            _before10Timer?.cancel();
+            _before10Timer = Timer(const Duration(milliseconds: 500), () {
+              debugPrint("播放完毕前10秒 - 执行回调");
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                widget.onVideoPlayBefore10?.call();
+              });
+            });
+          }
+        }
       }
     }
   }
@@ -169,6 +234,42 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       // 封面加载失败不影响视频播放
     }
   }
+  /// 异步加载封面数据
+  void _loadPlayAsync() {
+    try {
+      // 使用缓存检查
+      final cacheManager = CoverCacheManager();
+            final config = GlobalConfig.instance;
+      if (cacheManager.isPlayCached(widget.video.playUrl!)) {
+        final cachedData = cacheManager.getFromCachePlay(widget.video.playUrl!);
+        if (cachedData != null) {
+          if (mounted) {
+            setState(() {
+              widget.video.setvideourl = cachedData;
+            });
+          }
+          return;
+        }
+      }
+
+      final playData = AesEncryptSimple.getm3u8(
+        config.playDomain,
+        widget.video.coverUrl,
+      );
+
+      // 缓存数据
+      cacheManager.addToPlayCache(widget.video.playUrl!, playData);
+
+      // 更新状态
+      if (mounted) {
+        setState(() {
+          widget.video.setvideourl = playData;
+        });
+      }
+    } catch (e) {
+      debugPrint('视频预解密失败: ${widget.video.playUrl}, 错误: $e');
+    }
+  }
 
   /// 播放视频
   void play() {
@@ -191,7 +292,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
             const Icon(Icons.error_outline, color: Colors.white, size: 48),
             const SizedBox(height: 16),
             Text(
-              '视频加载失败${widget.video.id}',
+              '视频加载失败${widget.video.videoUrl}',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.white),
@@ -341,7 +442,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       child: Align(
         alignment: Alignment.center,
         child: AnimatedOpacity(
-          opacity: _isSeeking ? 1.0 : 0.0,
+          // opacity: _isSeeking ? 1.0 : 0.0,
+          opacity: _isSeeking ? 1.0 : 1.0,
           duration: const Duration(milliseconds: 80),
           child: Text(
             '${_formatDuration(position)} / ${_formatDuration(duration)}',
@@ -403,6 +505,23 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  /// 重新加载视频
+  void loadVideo(VideoData newVideo) {
+    if (_videoController != null && _videoController!.value.isInitialized) {
+      _videoController!.pause();
+      _videoController!.dispose();
+    }
+
+    setState(() {
+      _videoController = null;
+      _isInitialized = false;
+      _hasError = false;
+      _currentPosition = Duration.zero;
+    });
+
+    _initializePlayer();
+  }
+
   @override
   void dispose() {
     // 释放播放器资源
@@ -411,6 +530,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     _videoController?.dispose();
     // 释放ValueNotifier资源
     _positionNotifier.dispose();
+    // 取消防抖 Timer
+    _before10Timer?.cancel();
     super.dispose();
   }
 
@@ -497,6 +618,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
               ),
             // 进度条（仅在初始化后显示）
             if (_isInitialized) _buildProgressBar(),
+            // 短剧集数控制（仅在初始化后且为短剧时显示）
+            // if (_isInitialized && widget.isDrama) _buildEpisodeControls(),
             // 视频信息叠加层（仅在初始化后显示）
             if (_isInitialized && !_isSeeking)
               Positioned(
@@ -506,6 +629,16 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 视频标题
+                    Text(
+                      '测试视频url：${widget.video.videoUrl}',
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
+                      ),
+                    ),
                     // 视频描述
                     Text(
                       widget.video.description,
@@ -530,7 +663,9 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                           ),
                         ),
                       ),
-                    if (_isInitialized && widget.video.episodeCount > 1)
+                    if (_isInitialized &&
+                        widget.video.totalEpisodes != null &&
+                        widget.video.totalEpisodes! > 1)
                       _episodeCountBar(),
                   ],
                 ),
@@ -541,6 +676,80 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     );
   }
 
+  /// 构建短剧集数控制器
+  Widget _buildEpisodeControls() {
+    return Positioned(
+      top: 50,
+      right: 10,
+      child: Column(
+        children: [
+          // 上一集按钮
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.skip_previous, color: Colors.white),
+              onPressed: widget.currentEpisode! > 1
+                  ? _playPreviousEpisode
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 集数显示
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '第${widget.currentEpisode}/${widget.totalEpisodes}集',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 下一集按钮
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.skip_next, color: Colors.white),
+              onPressed: widget.currentEpisode! < widget.totalEpisodes!
+                  ? _playNextEpisode
+                  : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 播放上一集
+  void _playPreviousEpisode() {
+    if (widget.currentEpisode! > 1) {
+      widget.onEpisodeChange?.call(widget.currentEpisode! - 1);
+    }
+  }
+
+  /// 播放下一集
+  void _playNextEpisode() {
+    if (widget.currentEpisode! < widget.totalEpisodes!) {
+      widget.onEpisodeChange?.call(widget.currentEpisode! + 1);
+    }
+  }
+
   /// 构建集数行
   Widget _episodeCountBar() {
     return Column(
@@ -549,25 +758,25 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         GestureDetector(
           onTap: () {
             debugPrint('跳转到集数列表页面');
-            // 跳转到集数列表页面
-            // Navigator.of(context).push(
-            //   MaterialPageRoute(
-            //     builder: (context) => EpisodeListPage(
-            //       video: widget.video,
-            //     ),
-            //   ),
-            // );
+            pushScreen(
+              context,
+              screen: DramaDetailPage(dramaId: widget.video.id),
+              pageTransitionAnimation: PageTransitionAnimation.platform,
+            );
+            if (_videoController!.value.isPlaying) {
+              _videoController!.pause();
+            }
           },
           child: Container(
             padding: const EdgeInsets.all(8),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Center(
               child: Text(
-                '观看完整短剧·全${widget.video.episodeCount}集',
+                '观看完整短剧·全${widget.video.totalEpisodes}集',
                 style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
             ),

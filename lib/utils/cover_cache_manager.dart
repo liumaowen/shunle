@@ -17,6 +17,7 @@ class CoverCacheManager {
 
   /// 使用 LinkedHashMap 实现 LRU 缓存策略
   final LinkedHashMap<String, Uint8List> _memoryCache = LinkedHashMap();
+  final LinkedHashMap<String, String> _memoryPlayCache = LinkedHashMap();
   static const int _maxMemoryCacheSize = 20; // 增加缓存大小到20个
 
   /// 内存限制（10MB）
@@ -37,6 +38,21 @@ class CoverCacheManager {
 
     debugPrint(
       '缓存封面: ${_memoryCache.length}个, 总大小: ${(_currentCacheBytes / 1024 / 1024).toStringAsFixed(2)}MB',
+    );
+  }
+  void addToPlayCache(String url, String data) {
+    // 如果已存在，先移除
+    _memoryPlayCache.remove(url);
+
+    // 检查并清理超出内存限制的缓存
+    _cleanupCacheIfNeeded(data.length);
+
+    // 添加新缓存
+    _memoryPlayCache[url] = data;
+    _currentCacheBytes += data.length;
+
+    debugPrint(
+      '缓存视频: ${_memoryPlayCache.length}个, 总大小: ${(_currentCacheBytes / 1024 / 1024).toStringAsFixed(2)}MB',
     );
   }
 
@@ -64,10 +80,25 @@ class CoverCacheManager {
     _memoryCache[url] = data!;
     return data;
   }
+  /// 从缓存获取（访问时更新LRU）
+  String? getFromCachePlay(String url) {
+    if (!_memoryPlayCache.containsKey(url)) {
+      return null;
+    }
+
+    // 将访问的项移到最后（LRU）
+    final data = _memoryPlayCache.remove(url);
+    _memoryPlayCache[url] = data!;
+    return data;
+  }
 
   /// 检查是否已缓存
   bool isCached(String url) {
     return _memoryCache.containsKey(url);
+  }
+  /// 检查视频是否已缓存
+  bool isPlayCached(String url) {
+    return _memoryPlayCache.containsKey(url);
   }
 
   /// 获取缓存大小

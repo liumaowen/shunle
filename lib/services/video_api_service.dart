@@ -30,15 +30,15 @@ class VideoApiService {
   /// - 网络错误
   /// - API 返回错误
   /// - JSON 解析失败
-  Future<List<VideoData>> fetchVideos({
-    required int page,
-    int size = 10,
+  static Future<List<VideoData>> fetchVideos({
+    required String page,
+    String size = '10,',
   }) async {
     try {
       // 构建 URL
-      final uri = Uri.parse(baseUrl).replace(
-        queryParameters: {'page': page.toString(), 'size': size.toString()},
-      );
+      final uri = Uri.parse(
+        baseUrl,
+      ).replace(queryParameters: {'page': page, 'size': size});
 
       // 发送 GET 请求
       final response = await http.get(uri).timeout(timeout);
@@ -120,6 +120,8 @@ class VideoApiService {
             config.playDomain,
             element['playUrl'],
           );
+          element['playUrl'] = element['playUrl'];
+          element['needJiemi'] = true;
 
           // 设置封面 URL
           // element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
@@ -183,7 +185,9 @@ class VideoApiService {
             config.playDomain,
             element['first']['playUrl'],
           );
-
+          element['contentType'] = ContentType.drama;
+          element['needJiemi'] = true;
+          element['playUrl'] = element['first']['playUrl'];
           // 设置封面 URL
           // element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
         }
@@ -206,6 +210,157 @@ class VideoApiService {
       }
     } catch (error) {
       throw Exception('获取drama失败: $error');
+    }
+  }
+
+  /// 获取短剧详情
+  /// 参数:
+  /// - dramaId: 短剧ID
+  ///
+  /// 返回:
+  /// - VideoData 列表，包含完整的集数列表
+  ///
+  static Future<List<VideoData>> getDramaDetail(String dramaId) async {
+    try {
+      // 获取配置信息
+      final config = GlobalConfig.instance;
+      // 构建 URL
+      final uri = Uri.parse(
+        '${GlobalConfig.apiBase}/ShortMovie/ShortMovieDetail',
+      );
+      // 构建请求头
+      final headers = {
+        "authorization": "Bearer null",
+        "Accept": "application/json, text/plain, */*",
+        "x-auth-uuid": UUIDUtils.generateV4(),
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+      };
+      // 直接加密整个 JSON 对象
+      final String aesform = AesEncryptSimple.encrypt(
+        json.encode({"Id": dramaId}),
+      );
+      // 发送 POST 请求
+      final response = await http
+          .post(uri, headers: headers, body: aesform)
+          .timeout(timeout);
+      if (response.statusCode == 200) {
+        final text = response.body;
+        // 解密数据
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
+        // 解析 JSON
+        final list99 = json.decode(decryptedPassword);
+        // 提取数据
+        final list100 = list99?['data']['items'] ?? [];
+        final List<dynamic> dataList = list100 as List<dynamic>;
+        for (var i = 0; i < dataList.length; i++) {
+          final element = dataList[i];
+          if(i == 0) {
+            element['link'] = AesEncryptSimple.getm3u8(
+              config.playDomain,
+              element['playUrl'],
+            );
+          }
+          element['playUrl'] = element['playUrl'];
+          element['contentType'] = ContentType.episode;
+          element['needJiemi'] = true;
+          // 设置封面 URL
+          // element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
+        }
+        if (dataList.isEmpty) {
+          return [];
+        } else {
+          // 将 JSON 转换为 VideoData 对象列表
+          return dataList.indexed
+              .map(
+                (item) => VideoData.fromJson(
+                  item.$2 as Map<String, dynamic>,
+                  item.$1,
+                ),
+              )
+              .toList();
+        }
+      } else {
+        throw Exception('获取drama详情HTTP 错误: ${response.statusCode}');
+      }
+    } catch (error) {
+      throw Exception('获取drama详情失败: $error');
+    }
+  }
+
+  static Future<bool> isVideoUrlValid(String videoUrl) async {
+    try {
+      final response = await http.head(Uri.parse(videoUrl))
+          .timeout(const Duration(seconds: 5));
+      // 返回状态码200表示有效
+      return response.statusCode == 200;
+    } catch (e) {
+      // 请求异常，视为无效
+      return false;
+    }
+  }
+
+  /// 获取短剧详情（新方法，返回完整的短剧信息）
+  ///
+  /// 参数:
+  /// - dramaId: 短剧ID
+  ///
+  /// 返回:
+  /// - VideoData 包含完整的集数列表信息
+  ///
+  static Future<VideoData?> getDramaDetailWithEpisodes(String dramaId) async {
+    try {
+      // 首先获取短剧基本信息
+      final config = GlobalConfig.instance;
+      final uri = Uri.parse('${GlobalConfig.apiBase}/ShortMovie/ShortMovieDetail');
+      final headers = {
+        "authorization": "Bearer null",
+        "Accept": "application/json, text/plain, */*",
+        "x-auth-uuid": UUIDUtils.generateV4(),
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+      };
+
+      // 获取短剧详情
+      final response = await http
+          .post(uri, headers: headers, body: AesEncryptSimple.encrypt(json.encode({"Id": dramaId})))
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final text = response.body;
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
+        final jsonData = json.decode(decryptedPassword);
+        final dramaData = jsonData?['data'];
+
+        if (dramaData == null) {
+          return null;
+        }
+
+        // 解析短剧基本信息
+        final drama = VideoData(
+          id: dramaId,
+          description: dramaData['name'] ?? '',
+          duration: const Duration(seconds: 0),
+          coverUrl: dramaData['imgUrl'] ?? '',
+          videoUrl: '',
+          category: 'drama',
+          contentType: ContentType.drama,
+          totalEpisodes: dramaData['totalEpisodes']?.toInt() ?? 0,
+          episodes: [],
+        );
+
+        // 解析集数列表
+        final episodesList = dramaData['items'] as List?;
+        if (episodesList != null) {
+          drama.episodes = episodesList.map((episodeJson) {
+            return EpisodeInfo.fromJson(episodeJson);
+          }).toList();
+        }
+
+        return drama;
+      } else {
+        throw Exception('获取短剧详情HTTP 错误: ${response.statusCode}');
+      }
+    } catch (error) {
+      throw Exception('获取短剧详情失败: $error');
     }
   }
 
@@ -266,89 +421,100 @@ class VideoApiService {
       throw Exception('配置获取失败: $e');
     }
   }
+
+  // ignore: non_constant_identifier_names
+  static List<VideoApiProvider> API_PROVIDERS = [
+    VideoApiProviderImpl(
+      name: 'Kuaishou',
+      enabled: true,
+      fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
+        return VideoApiService.fetchVideos(
+          page: page ?? '1',
+          size: pagesize ?? '10',
+        );
+      },
+    ),
+    VideoApiProviderImpl(
+      name: 'Mgtv',
+      enabled: false,
+      fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
+        int pageindex =
+            (Random().nextDouble() *
+                    (GlobalConfig.shortVideoRandomMax -
+                        GlobalConfig.shortVideoRandomMin +
+                        1))
+                .floor() +
+            GlobalConfig.shortVideoRandomMin;
+        Map<String, String> mgtvForm = {
+          'PageIndex': page!.isNotEmpty ? page : pageindex.toString(),
+          'PageSize': pagesize!.isNotEmpty ? pagesize : '5',
+          'VideoType': videoType ?? '',
+          'SortType': sortType ?? '0',
+          'CollectionId': collectionId ?? '',
+        };
+        return VideoApiService.fetchMgtvList(mgtvForm);
+      },
+    ),
+  ];
+
+  /// 从所有启用的 API 提供商获取视频并合并
+  /// @param collectionId 收藏ID，用于不同分类的视频获取
+  static Future<List<VideoData>> fetchFromAllProviders({
+    String? page,
+    String? pagesize,
+    String? videoType,
+    String? sortType,
+    String? collectionId,
+  }) async {
+    final enabledProviders = API_PROVIDERS.where((p) => p.enabled).toList();
+    final futures = enabledProviders.map((provider) async {
+      try {
+        final videos = await provider.fetch(
+          page: page,
+          pagesize: pagesize,
+          collectionId: collectionId,
+          videoType: videoType,
+          sortType: sortType,
+        );
+        return {'success': true, 'data': videos, 'provider': provider.name};
+      } catch (e) {
+        return {'success': false, 'error': e, 'provider': provider.name};
+      }
+    }).toList();
+
+    final results = await Future.wait(futures);
+
+    final allVideos = <VideoData>[];
+    for (final result in results) {
+      if (result.containsKey('success') && result['success'] == true) {
+        print(
+          '${result['provider']}: 获取 ${(result['data'] as List).length} 个视频',
+        );
+        allVideos.addAll(result['data'] as List<VideoData>);
+      } else {
+        debugPrint('${result['provider']}: 请求失败 - ${result['error']}');
+      }
+    }
+
+    return allVideos;
+  }
 }
 
-// ignore: non_constant_identifier_names
-List<VideoApiProvider> API_PROVIDERS = [
-  VideoApiProviderImpl(
-    name: 'Kuaishou',
-    enabled: false,
-    fetchFunction: ({page, videoType, sortType, collectionId}) {
-      return VideoApiService().fetchVideos(page: 1, size: 10);
-    },
-  ),
-  VideoApiProviderImpl(
-    name: 'Mgtv',
-    enabled: false,
-    fetchFunction: ({page, videoType, sortType, collectionId}) {
-      int pageindex =
-          (Random().nextDouble() *
-                  (GlobalConfig.shortVideoRandomMax -
-                      GlobalConfig.shortVideoRandomMin +
-                      1))
-              .floor() +
-          GlobalConfig.shortVideoRandomMin;
-      Map<String, String> mgtvForm = {
-        'PageIndex': page!.isNotEmpty ? page : pageindex.toString(),
-        'PageSize': '5',
-        'VideoType': videoType ?? '',
-        'SortType': sortType ?? '0',
-        'CollectionId': collectionId ?? '',
-      };
-      return VideoApiService.fetchMgtvList(mgtvForm);
-    },
-  ),
-  VideoApiProviderImpl(
-    name: 'Drama',
-    enabled: true,
-    fetchFunction: ({page, videoType, sortType, collectionId}) {
-      Map<String, String> mgtvForm = {
-        'PageIndex': '1',
-        'PageSize': '5',
-        'ChannelId': '',
-        'GenderChannelType': '',
-      };
-      return VideoApiService.fetchDrama(mgtvForm);
-    },
-  ),
-];
-
-/// 从所有启用的 API 提供商获取视频并合并
-/// @param collectionId 收藏ID，用于不同分类的视频获取
-Future<List<VideoData>> fetchFromAllProviders({
+/// 获取 短剧 视频
+Future<List<VideoData>> getDrama({
   String? page,
+  String? pagesize,
   String? videoType,
   String? sortType,
   String? collectionId,
 }) async {
-  final enabledProviders = API_PROVIDERS.where((p) => p.enabled).toList();
-  final futures = enabledProviders.map((provider) async {
-    try {
-      final videos = await provider.fetch(
-        page: page,
-        collectionId: collectionId,
-        videoType: videoType,
-        sortType: sortType,
-      );
-      return {'success': true, 'data': videos, 'provider': provider.name};
-    } catch (e) {
-      return {'success': false, 'error': e, 'provider': provider.name};
-    }
-  }).toList();
-
-  final results = await Future.wait(futures);
-
-  final allVideos = <VideoData>[];
-  for (final result in results) {
-    if (result.containsKey('success') && result['success'] == true) {
-      print('${result['provider']}: 获取 ${(result['data'] as List).length} 个视频');
-      allVideos.addAll(result['data'] as List<VideoData>);
-    } else {
-      debugPrint('${result['provider']}: 请求失败 - ${result['error']}');
-    }
-  }
-
-  return allVideos;
+  Map<String, String> dramaForm = {
+    'PageIndex': page!.isNotEmpty ? page : '1',
+    'PageSize': pagesize!.isNotEmpty ? pagesize : '5',
+    'ChannelId': '',
+    'GenderChannelType': '',
+  };
+  return VideoApiService.fetchDrama(dramaForm);
 }
 
 /// 本地视频资源（示例数据）
