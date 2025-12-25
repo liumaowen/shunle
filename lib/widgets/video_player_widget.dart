@@ -18,6 +18,7 @@ import '../utils/cover_cache_manager.dart';
 class VideoPlayerWidget extends StatefulWidget {
   /// 测试视频数据
   final int len;
+
   /// 视频数据
   final VideoData video;
 
@@ -110,7 +111,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   /// 初始化视频播放器
   Future<void> _initializePlayer() async {
     try {
-        if(widget.video.needJiemi!) {
+      if (widget.video.needJiemi!) {
         // 异步加载封面数据，避免阻塞主线程
         if (widget.video.coverUrl.isNotEmpty) {
           // _loadCoverAsync();
@@ -177,24 +178,25 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
         // 检查是否需要触发前10秒回调
         final duration = _videoController!.value.duration;
-        if (duration.inSeconds > 10) {  // 确保视频时长超过10秒
+        if (duration.inSeconds > 10) {
+          // 确保视频时长超过10秒
           final befor10 = duration.inSeconds - 10;
           final currseconds = _currentPosition.inSeconds;
           bool needjiemi = widget.video.needJiemi ?? false;
 
-          debugPrint("当前位置：${currseconds}");
-          debugPrint("总时长：${duration.inSeconds}");
-          debugPrint("是否需要解密：$needjiemi");
-          debugPrint("befor10：$befor10");
+          // debugPrint("当前位置：${currseconds}");
+          // debugPrint("总时长：${duration.inSeconds}");
+          // debugPrint("是否需要解密：$needjiemi");
+          // debugPrint("befor10：$befor10");
 
           /// 在播放完毕前10秒时，判断下一个视频是否有效
           if (needjiemi && (currseconds == befor10)) {
-            debugPrint("触发前10秒回调");
+            // debugPrint("触发前10秒回调");
 
             // 防抖：如果500ms内多次触发，只执行最后一次
             _before10Timer?.cancel();
             _before10Timer = Timer(const Duration(milliseconds: 500), () {
-              debugPrint("播放完毕前10秒 - 执行回调");
+              // debugPrint("播放完毕前10秒 - 执行回调");
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 widget.onVideoPlayBefore10?.call();
               });
@@ -241,12 +243,13 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       // 封面加载失败不影响视频播放
     }
   }
+
   /// 异步加载封面数据
   void _loadPlayAsync() {
     try {
       // 使用缓存检查
       final cacheManager = CoverCacheManager();
-            final config = GlobalConfig.instance;
+      final config = GlobalConfig.instance;
       if (cacheManager.isPlayCached(widget.video.playUrl!)) {
         final cachedData = cacheManager.getFromCachePlay(widget.video.playUrl!);
         if (cachedData != null) {
@@ -305,7 +308,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
             const Icon(Icons.error_outline, color: Colors.white, size: 48),
             const SizedBox(height: 16),
             Text(
-              '视频加载失败${widget.video.videoUrl}',
+              '视频加载失败',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.white),
@@ -456,7 +459,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         alignment: Alignment.center,
         child: AnimatedOpacity(
           // opacity: _isSeeking ? 1.0 : 0.0,
-          opacity: _isSeeking ? 1.0 : 1.0,
+          opacity: _isSeeking ? 1.0 : 0.0,
           duration: const Duration(milliseconds: 80),
           child: Text(
             '${_formatDuration(position)} / ${_formatDuration(duration)}',

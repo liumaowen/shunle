@@ -254,7 +254,7 @@ class VideoApiService {
         final List<dynamic> dataList = list100 as List<dynamic>;
         for (var i = 0; i < dataList.length; i++) {
           final element = dataList[i];
-          if(i < 5) {
+          if (i < 5) {
             element['link'] = AesEncryptSimple.getm3u8(
               config.playDomain,
               element['playUrl'],
@@ -289,7 +289,8 @@ class VideoApiService {
 
   static Future<bool> isVideoUrlValid(String videoUrl) async {
     try {
-      final response = await http.head(Uri.parse(videoUrl))
+      final response = await http
+          .head(Uri.parse(videoUrl))
           .timeout(const Duration(seconds: 5));
       // 返回状态码200表示有效
       return response.statusCode == 200;
@@ -311,7 +312,9 @@ class VideoApiService {
     try {
       // 首先获取短剧基本信息
       final config = GlobalConfig.instance;
-      final uri = Uri.parse('${GlobalConfig.apiBase}/ShortMovie/ShortMovieDetail');
+      final uri = Uri.parse(
+        '${GlobalConfig.apiBase}/ShortMovie/ShortMovieDetail',
+      );
       final headers = {
         "authorization": "Bearer null",
         "Accept": "application/json, text/plain, */*",
@@ -321,7 +324,11 @@ class VideoApiService {
 
       // 获取短剧详情
       final response = await http
-          .post(uri, headers: headers, body: AesEncryptSimple.encrypt(json.encode({"Id": dramaId})))
+          .post(
+            uri,
+            headers: headers,
+            body: AesEncryptSimple.encrypt(json.encode({"Id": dramaId})),
+          )
           .timeout(timeout);
 
       if (response.statusCode == 200) {
@@ -426,7 +433,7 @@ class VideoApiService {
   static List<VideoApiProvider> API_PROVIDERS = [
     VideoApiProviderImpl(
       name: 'Kuaishou',
-      enabled: true,
+      enabled: false,
       fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
         return VideoApiService.fetchVideos(
           page: page ?? '1',
@@ -436,7 +443,7 @@ class VideoApiService {
     ),
     VideoApiProviderImpl(
       name: 'Mgtv',
-      enabled: false,
+      enabled: true,
       fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
         int pageindex =
             (Random().nextDouble() *

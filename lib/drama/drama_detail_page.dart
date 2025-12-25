@@ -41,6 +41,13 @@ class _DramaDetailPageState extends State<DramaDetailPage> {
     _jishu = _currentEpisode;
   }
 
+  /// 处理集数变化
+  void _handleEpisodeChange(int episodeNumber) {
+    setState(() {
+      _jishu = episodeNumber;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,7 +87,11 @@ class _DramaDetailPageState extends State<DramaDetailPage> {
     // 这样切换 Tab 时不会销毁旧 Provider，避免 "already disposed" 错误
     return ChangeNotifierProvider<VideoListProvider>.value(
       value: _dramaProvider,
-      child: ShortVideoList(tab: _buildDramaTab(), dramaId: widget.dramaId),
+      child: ShortVideoList(
+        tab: _buildDramaTab(),
+        dramaId: widget.dramaId,
+        onEpisodeChange: _handleEpisodeChange,
+      ),
     );
   }
 
@@ -93,7 +104,7 @@ class _DramaDetailPageState extends State<DramaDetailPage> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.6), // 顶部半透明
+            Colors.black.withValues(alpha: 0.0), // 顶部半透明
             Colors.transparent, // 底部完全透明
           ],
         ),
@@ -103,25 +114,21 @@ class _DramaDetailPageState extends State<DramaDetailPage> {
           // 返回按钮 + 文字组合
           GestureDetector(
             onTap: () {
-              Navigator.of(context).pop();
+              Navigator.pop(context);
             },
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
                   // 返回图标
-                  Container(
+                  SizedBox(
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
                     child: Center(
                       child: Icon(
                         Icons.arrow_back,
                         color: Colors.white,
-                        size: 20,
+                        size: 32,
                       ),
                     ),
                   ),
@@ -130,7 +137,7 @@ class _DramaDetailPageState extends State<DramaDetailPage> {
                   Text(
                     '第 $_jishu 集',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 20,
                       color: Colors.white,
                       fontWeight: FontWeight.w500,
                       shadows: [
