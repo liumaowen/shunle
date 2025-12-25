@@ -48,6 +48,16 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
     };
   }
 
+  /// 暂停当前正在播放的视频
+  void pauseAllVideos() {
+    _videoListKeys[_currentIndex]?.currentState?.pauseCurrentVideo();
+  }
+
+  /// 恢复当前视频的播放
+  void resumeCurrentVideo() {
+    _videoListKeys[_currentIndex]?.currentState?.playCurrentVideo();
+  }
+
   @override
   void dispose() {
     _pageController.dispose();

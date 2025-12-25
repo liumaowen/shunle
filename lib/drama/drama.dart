@@ -9,12 +9,24 @@ class Drams extends StatefulWidget {
 
   @override
   State<Drams> createState() => _DramsState();
+
+  /// 暂停当前正在播放的视频
+  static void pauseAllVideos(BuildContext context) {
+    context.findAncestorStateOfType<_DramsState>()?._pauseAllVideos();
+  }
+
+  /// 恢复当前视频的播放
+  static void playCurrentVideo(BuildContext context) {
+    context.findAncestorStateOfType<_DramsState>()?._playCurrentVideo();
+  }
 }
 
 class _DramsState extends State<Drams> {
 
   /// 为每个 Tab 保持独立的 VideoListProvider 实例，防止切换时被销毁
   late final VideoListProvider _providers;
+  late final GlobalKey _videoListKey;
+
   // 短剧分类
   final dramaTabs = TabsType(
     title: '热门短剧',
@@ -28,6 +40,33 @@ class _DramsState extends State<Drams> {
   void initState() {
     super.initState();
     _providers = VideoListProvider();
+    _videoListKey = GlobalKey();
+  }
+
+  /// 暂停当前正在播放的视频（公开方法供 Tabs 调用）
+  void pauseAllVideos() {
+    final state = _videoListKey.currentState;
+    if (state != null) {
+      (state as dynamic).pauseCurrentVideo();
+    }
+  }
+
+  /// 恢复当前视频的播放（公开方法供 Tabs 调用）
+  void playCurrentVideo() {
+    final state = _videoListKey.currentState;
+    if (state != null) {
+      (state as dynamic).playCurrentVideo();
+    }
+  }
+
+  /// 私有方法供 Drams 类的静态方法调用
+  void _pauseAllVideos() {
+    pauseAllVideos();
+  }
+
+  /// 私有方法供 Drams 类的静态方法调用
+  void _playCurrentVideo() {
+    playCurrentVideo();
   }
 
   @override
@@ -52,7 +91,7 @@ class _DramsState extends State<Drams> {
     // 这样切换 Tab 时不会销毁旧 Provider，避免 "already disposed" 错误
     return ChangeNotifierProvider<VideoListProvider>.value(
       value: _providers,
-      child: ShortVideoList(tab: dramaTabs),
+      child: ShortVideoList(key: _videoListKey, tab: dramaTabs),
     );
   }
 }

@@ -5,12 +5,30 @@ import "package:shunle/drama/drama.dart";
 import "package:shunle/home/home.dart";
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
 
-class Tabs extends StatelessWidget {
+class Tabs extends StatefulWidget {
   Tabs({super.key});
-final PersistentTabController _tabController = PersistentTabController(initialIndex: 0);
-  final List<PersistentTabConfig> _tabs = [
+
+  @override
+  State<Tabs> createState() => _TabsState();
+}
+
+class _TabsState extends State<Tabs> {
+  late PersistentTabController _tabController;
+  int _currentTabIndex = 0;
+  late final GlobalKey _homeKey;
+  late final GlobalKey _dramsKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = PersistentTabController(initialIndex: 0);
+    _homeKey = GlobalKey();
+    _dramsKey = GlobalKey();
+  }
+
+  late final List<PersistentTabConfig> _tabs = [
     PersistentTabConfig(
-      screen: Home(),
+      screen: Home(key: _homeKey),
       item: ItemConfig(
         icon: SizedBox.shrink(),
         title: "推荐",
@@ -21,7 +39,7 @@ final PersistentTabController _tabController = PersistentTabController(initialIn
     ),
     PersistentTabConfig(
       // screen: Scaffold(body: Center(child: Text("短剧"))),
-      screen: Drams(),
+      screen: Drams(key: _dramsKey),
       item: ItemConfig(
         icon: SizedBox.shrink(),
         title: "短剧",
@@ -44,6 +62,39 @@ final PersistentTabController _tabController = PersistentTabController(initialIn
 
   void _onItemTapped(int index) {
     debugPrint('点击了第 $index 个选项卡');
+
+    // 暂停上一个 Tab 的视频
+    if (_currentTabIndex == 0) {
+      // 暂停推荐 Tab 的视频
+      final homeState = _homeKey.currentState;
+      if (homeState != null) {
+        (homeState as dynamic).pauseAllVideos();
+      }
+    } else if (_currentTabIndex == 1) {
+      // 暂停短剧 Tab 的视频
+      final dramsState = _dramsKey.currentState;
+      if (dramsState != null) {
+        (dramsState as dynamic).pauseAllVideos();
+      }
+    }
+
+    // 更新当前索引
+    _currentTabIndex = index;
+
+    // 播放新 Tab 的视频
+    if (index == 0) {
+      // 播放推荐 Tab 的视频
+      final homeState = _homeKey.currentState;
+      if (homeState != null) {
+        (homeState as dynamic).playCurrentVideo();
+      }
+    } else if (index == 1) {
+      // 播放短剧 Tab 的视频
+      final dramsState = _dramsKey.currentState;
+      if (dramsState != null) {
+        (dramsState as dynamic).playCurrentVideo();
+      }
+    }
   }
 
   @override

@@ -280,11 +280,17 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   /// 播放视频
   void play() {
     _videoController?.play();
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   /// 暂停视频
   void pause() {
     _videoController?.pause();
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   /// 构建错误状态 UI
@@ -635,16 +641,6 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 视频标题
-                    Text(
-                      '测试视频url：${widget.video.videoUrl}',
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
-                      ),
-                    ),
                     // 视频描述
                     Text(
                       widget.video.description,

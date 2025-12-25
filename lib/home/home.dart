@@ -7,10 +7,54 @@ class Home extends StatefulWidget {
 
   @override
   State<Home> createState() => _HomeState();
+
+  /// 暂停当前正在播放的视频
+  static void pauseAllVideos(BuildContext context) {
+    context.findAncestorStateOfType<_HomeState>()?._pauseAllVideos();
+  }
+
+  /// 恢复当前视频的播放
+  static void playCurrentVideo(BuildContext context) {
+    context.findAncestorStateOfType<_HomeState>()?._playCurrentVideo();
+  }
 }
 
 class _HomeState extends State<Home> {
   int _currentTabIndex = 0;
+  late final GlobalKey _floatTabsKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatTabsKey = GlobalKey();
+  }
+
+  /// 暂停当前正在播放的视频（公开方法供 Tabs 调用）
+  void pauseAllVideos() {
+    final state = _floatTabsKey.currentState;
+    if (state != null) {
+      (state as dynamic).pauseAllVideos();
+    }
+  }
+
+  /// 恢复当前视频的播放（公开方法供 Tabs 调用）
+  void playCurrentVideo() {
+    final state = _floatTabsKey.currentState;
+    if (state != null) {
+      (state as dynamic).resumeCurrentVideo();
+    }
+  }
+
+  /// 私有方法供 Home 类的静态方法调用
+  void _pauseAllVideos() {
+    pauseAllVideos();
+  }
+
+  /// 私有方法供 Home 类的静态方法调用
+  void _playCurrentVideo() {
+    playCurrentVideo();
+  }
+
   final List<TabsType> _tabs = [
     TabsType(
       title: '推荐',
@@ -60,6 +104,7 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: HomeFloatTabs(
+      key: _floatTabsKey,
       initialIndex: _currentTabIndex,
       tabs: _tabs,
       onTabChanged: (index) {
