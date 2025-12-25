@@ -392,7 +392,7 @@ class ShortVideoListState extends State<ShortVideoList> {
         if (provider.videos.isEmpty) {
           return _buildEmptyWidget();
         }
-
+       debugPrint('当前索引：$_currentIndex 总数：${provider.videos.length} ');
         return Stack(
           children: [
             PageView.builder(
@@ -634,6 +634,13 @@ class ShortVideoListState extends State<ShortVideoList> {
   /// 处理视频加载失败
   void _handleVideoLoadFailed(int failedVideoIndex) {
     final provider = context.read<VideoListProvider>();
+
+    // 检查索引是否有效
+    if (failedVideoIndex < 0 || failedVideoIndex >= provider.videos.length) {
+      debugPrint('❌ 无效的视频索引: $failedVideoIndex，当前列表长度: ${provider.videos.length}');
+      return;
+    }
+
     final failedVideo = provider.videos[failedVideoIndex];
 
     // 标记视频为加载失败
@@ -641,20 +648,35 @@ class ShortVideoListState extends State<ShortVideoList> {
 
     // 从当前列表中移除失败的视频
     provider.removeVideo(failedVideo.id);
-// debugPrint('failedVideoIndex: ${failedVideoIndex}');
-// debugPrint('_currentIndex: ${_currentIndex}');
+
+    debugPrint('failedVideoIndex: ${failedVideoIndex}');
+    debugPrint('_currentIndex: ${_currentIndex}');
+
     // 如果失败的视频是当前正在播放的视频，跳转到下一个视频
     if (failedVideoIndex == _currentIndex) {
-      // 如果有下一个视频，跳转到下一个
-      if (_currentIndex < provider.videos.length) {
-        // 如果当前索引超出范围，设置为最后一个
-        if (_currentIndex >= provider.videos.length) {
+      // 如果当前索引超出范围，设置为最后一个
+      if (_currentIndex >= provider.videos.length) {
+        if (provider.videos.isNotEmpty) {
           setState(() {
             _currentIndex = provider.videos.length - 1;
           });
-        }
 
-        // 跳转到下一个视频
+          // 跳转到新的当前视频
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_currentIndex >= 0 && _currentIndex < provider.videos.length) {
+              _pageController.animateToPage(
+                _currentIndex,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+          });
+        } else {
+          // 如果没有视频了，显示空状态
+          debugPrint('所有视频都已加载失败或被删除');
+        }
+      } else if (_currentIndex < provider.videos.length) {
+        // 如果有下一个视频，跳转到下一个
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _pageController.animateToPage(
             _currentIndex,
@@ -662,9 +684,6 @@ class ShortVideoListState extends State<ShortVideoList> {
             curve: Curves.easeInOut,
           );
         });
-      } else if (provider.videos.isEmpty) {
-        // 如果没有视频了，显示空状态
-        debugPrint('所有视频都已加载失败或被删除');
       }
     } else if (failedVideoIndex < _currentIndex) {
       // 如果失败的视频在当前视频之前，调整当前索引

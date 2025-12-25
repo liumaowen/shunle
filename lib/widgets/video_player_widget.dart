@@ -117,7 +117,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         }
         // 异步加载封面数据，避免阻塞主线程
         if (widget.video.playUrl != null && widget.video.playUrl!.isNotEmpty) {
-          _loadPlayAsync();
+          // _loadPlayAsync();
         }
       }
 
@@ -157,6 +157,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       if (mounted) {
         setState(() {
           _hasError = true;
+          debugPrint('1111播放器初始化失败:${widget.video.videoUrl}');
         });
         // 通知父组件视频加载失败
         WidgetsBinding.instance.addPostFrameCallback((_) {

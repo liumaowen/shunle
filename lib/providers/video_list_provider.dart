@@ -142,6 +142,7 @@ class VideoListProvider extends ChangeNotifier {
       } else {
         newVideos = await VideoApiService.fetchFromAllProviders(
           page: page,
+          pagesize: _pageSize.toString(),
           videoType: tab.videoType,
           sortType: tab.sortType,
           collectionId: tab.collectionId,

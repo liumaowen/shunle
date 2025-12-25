@@ -254,7 +254,7 @@ class VideoApiService {
         final List<dynamic> dataList = list100 as List<dynamic>;
         for (var i = 0; i < dataList.length; i++) {
           final element = dataList[i];
-          if(i == 0) {
+          if(i < 5) {
             element['link'] = AesEncryptSimple.getm3u8(
               config.playDomain,
               element['playUrl'],

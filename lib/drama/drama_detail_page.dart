@@ -31,21 +31,34 @@ class DramaDetailPage extends StatefulWidget {
 class _DramaDetailPageState extends State<DramaDetailPage> {
   late final VideoListProvider _dramaProvider;
   late int _currentEpisode;
+  late int _jishu;
 
   @override
   void initState() {
     super.initState();
     _currentEpisode = widget.initialEpisode;
     _dramaProvider = VideoListProvider();
+    _jishu = _currentEpisode;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('短剧详情'),),
-      body: SafeArea(
-        bottom: false, // 只在顶部预留空间给状态栏
-        child: _buildTabContent(),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: SafeArea(
+              bottom: false, // 只在顶部预留空间给状态栏
+              child: _buildTabContent(),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(child: _buildTabBar()),
+          ),
+        ],
       ),
     );
   }
@@ -61,13 +74,80 @@ class _DramaDetailPageState extends State<DramaDetailPage> {
     );
   }
 
-    /// 短剧详情列表
+  /// 短剧详情列表
   Widget _buildTabContent() {
     // 使用 ChangeNotifierProvider.value 传入预创建的 Provider 实例
     // 这样切换 Tab 时不会销毁旧 Provider，避免 "already disposed" 错误
     return ChangeNotifierProvider<VideoListProvider>.value(
       value: _dramaProvider,
-      child: ShortVideoList(tab: _buildDramaTab(),dramaId: widget.dramaId,),
+      child: ShortVideoList(tab: _buildDramaTab(), dramaId: widget.dramaId),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      height: 50,
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: 0.6), // 顶部半透明
+            Colors.transparent, // 底部完全透明
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          // 返回按钮 + 文字组合
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).pop();
+            },
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  // 返回图标
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  // 返回文字
+                  Text(
+                    '第 $_jishu 集',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 2,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
