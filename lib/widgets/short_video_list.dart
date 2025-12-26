@@ -1,7 +1,3 @@
-/// 短视频列表容器
-/// 使用纵向 PageView 实现上下滑动切换视频，支持无限滚动加载
-library;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +7,7 @@ import 'dart:async';
 
 import '../providers/video_list_provider.dart';
 import '../utils/cover_cache_manager.dart';
-import '../utils/crypto/aes_encrypt_simple.dart';
+import '../services/crypto_isolate_service.dart';
 import 'video_player_widget.dart';
 import 'episode_selector_dialog.dart';
 
@@ -215,9 +211,6 @@ class ShortVideoListState extends State<ShortVideoList> {
     // 监听页面滚动，实现无限加载
     _pageController.addListener(_onPageScroll);
 
-    // 启动内存清理
-    // _startMemoryCleanup();
-
     // 初始化加载视频
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -231,15 +224,6 @@ class ShortVideoListState extends State<ShortVideoList> {
 
   /// 内存清理计时器
   Timer? _cleanupTimer;
-
-  /// 启动内存清理
-  void _startMemoryCleanup() {
-    _cleanupTimer?.cancel();
-    // 每30秒清理一次超出范围的缓存
-    _cleanupTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      _cleanupOutOfRangeVideos();
-    });
-  }
 
   /// 清理超出缓存范围的视频
   void _cleanupOutOfRangeVideos() {
@@ -339,10 +323,10 @@ class ShortVideoListState extends State<ShortVideoList> {
         if (video.playUrl != null &&
             video.playUrl!.isNotEmpty &&
             !CoverCacheManager().isPlayCached(video.playUrl!)) {
-          // 使用 Future 在后台线程执行解密和缓存
+          // ✅ 使用 Isolate 在后台线程执行 getm3u8（不阻塞主线程）
           Future.microtask(() async {
             try {
-              final palyData = AesEncryptSimple.getm3u8(
+              final palyData = await CryptoIsolateService.instance.getm3u8(
                 config.playDomain,
                 video.playUrl!,
               );
@@ -609,10 +593,10 @@ class ShortVideoListState extends State<ShortVideoList> {
       debugPrint("isVideoUrlValid: $isVideoUrlValid");
       debugPrint("nextVideoUrl旧: ${nextVideo.videoUrl}");
       if (!isVideoUrlValid) {
-        // 使用 Future 在后台线程执行解密和缓存
+        // ✅ 使用 Isolate 在后台线程执行 getm3u8（不阻塞主线程）
         Future.microtask(() async {
           try {
-            final palyData = AesEncryptSimple.getm3u8(
+            final palyData = await CryptoIsolateService.instance.getm3u8(
               config.playDomain,
               nextVideo.playUrl!,
             );
@@ -655,8 +639,8 @@ class ShortVideoListState extends State<ShortVideoList> {
     // 从当前列表中移除失败的视频
     provider.removeVideo(failedVideo.id);
 
-    debugPrint('failedVideoIndex: ${failedVideoIndex}');
-    debugPrint('_currentIndex: ${_currentIndex}');
+    debugPrint('failedVideoIndex: $failedVideoIndex');
+    debugPrint('_currentIndex: $_currentIndex');
 
     // 如果失败的视频是当前正在播放的视频，跳转到下一个视频
     if (failedVideoIndex == _currentIndex) {

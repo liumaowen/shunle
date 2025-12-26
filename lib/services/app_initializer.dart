@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shunle/services/video_api_service.dart';
+import 'package:shunle/services/crypto_isolate_service.dart';
 
 /// 应用初始化服务
 /// 提供应用启动时的各种初始化功能
@@ -20,10 +21,13 @@ class AppInitializer {
     }
 
     try {
-      // 1. 获取配置
+      // ✅ 1. 初始化加密 Isolate（必须首先初始化）
+      await _initializeCryptoIsolate();
+
+      // 2. 获取配置
       await _fetchConfig();
 
-      // 2. 其他初始化任务
+      // 3. 其他初始化任务
       await _performOtherInitializations();
 
       debugPrint('应用初始化完成');
@@ -34,6 +38,19 @@ class AppInitializer {
       if (showLoading && context != null) {
         _hideLoadingIndicator(context);
       }
+    }
+  }
+
+  /// ✅ 初始化加密 Isolate
+  static Future<void> _initializeCryptoIsolate() async {
+    debugPrint('正在初始化加密 Isolate...');
+    try {
+      await CryptoIsolateService.instance.initialize();
+      debugPrint('✅ 加密 Isolate 初始化成功');
+    } catch (e) {
+      debugPrint('❌ 加密 Isolate 初始化失败: $e');
+      // 不再 rethrow，因为有降级方案
+      // Web 平台会自动使用降级实现
     }
   }
 
@@ -76,3 +93,4 @@ class AppInitializer {
     Navigator.of(context).pop();
   }
 }
+
