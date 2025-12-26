@@ -310,6 +310,8 @@ class ShortVideoListState extends State<ShortVideoList> {
     _preloadTimer = Timer(const Duration(milliseconds: 200), () {
       final provider = context.read<VideoListProvider>();
       final videos = provider.videos;
+      // 通知外部集数已切换
+      widget.onEpisodeChange?.call(videos[_currentIndex].currentEpisode??1); // 直接传递实际的集数
       // 获取配置信息
       final config = GlobalConfig.instance;
       // 预加载当前索引之后 _preloadRange 个视频的封面

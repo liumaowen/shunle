@@ -433,7 +433,7 @@ class VideoApiService {
   static List<VideoApiProvider> API_PROVIDERS = [
     VideoApiProviderImpl(
       name: 'Kuaishou',
-      enabled: false,
+      enabled: true,
       fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
         return VideoApiService.fetchVideos(
           page: page ?? '1',
@@ -443,7 +443,7 @@ class VideoApiService {
     ),
     VideoApiProviderImpl(
       name: 'Mgtv',
-      enabled: true,
+      enabled: false,
       fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
         int pageindex =
             (Random().nextDouble() *
