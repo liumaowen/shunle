@@ -10,7 +10,7 @@ import 'package:shunle/drama/drama_detail_page.dart';
 import 'package:shunle/providers/global_config.dart';
 import 'package:video_player/video_player.dart';
 import 'video_data.dart';
-import '../utils/crypto/aes_encrypt_simple.dart';
+import '../services/crypto_compute_service.dart';
 import '../utils/cover_cache_manager.dart';
 
 /// 视频播放器 Widget
@@ -225,7 +225,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       }
 
       // 异步加载封面
-      final coverData = await AesEncryptSimple.fetchAndDecrypt(
+      final cryptoService = CryptoComputeService.instance;
+      final coverData = await cryptoService.fetchAndDecrypt(
         widget.video.coverUrl,
       );
 
@@ -245,7 +246,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   }
 
   /// 异步加载封面数据
-  void _loadPlayAsync() {
+  Future<void> _loadPlayAsync() async {
     try {
       // 使用缓存检查
       final cacheManager = CoverCacheManager();
@@ -262,7 +263,8 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         }
       }
 
-      final playData = AesEncryptSimple.getm3u8(
+      final cryptoService = CryptoComputeService.instance;
+      final playData = await cryptoService.getm3u8(
         config.playDomain,
         widget.video.coverUrl,
       );

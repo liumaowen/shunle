@@ -7,7 +7,7 @@ import 'dart:async';
 
 import '../providers/video_list_provider.dart';
 import '../utils/cover_cache_manager.dart';
-import '../services/crypto_isolate_service.dart';
+import '../services/crypto_compute_service.dart';
 import 'video_player_widget.dart';
 import 'episode_selector_dialog.dart';
 
@@ -291,11 +291,13 @@ class ShortVideoListState extends State<ShortVideoList> {
     _preloadTimer?.cancel();
 
     // 延迟预加载，避免阻塞主线程
-    _preloadTimer = Timer(const Duration(milliseconds: 200), () {
+    _preloadTimer = Timer(const Duration(milliseconds: 500), () {
       final provider = context.read<VideoListProvider>();
       final videos = provider.videos;
       // 通知外部集数已切换
-      widget.onEpisodeChange?.call(videos[_currentIndex].currentEpisode??1); // 直接传递实际的集数
+      widget.onEpisodeChange?.call(
+        videos[_currentIndex].currentEpisode ?? 1,
+      ); // 直接传递实际的集数
       // 获取配置信息
       final config = GlobalConfig.instance;
       // 预加载当前索引之后 _preloadRange 个视频的封面
@@ -323,10 +325,10 @@ class ShortVideoListState extends State<ShortVideoList> {
         if (video.playUrl != null &&
             video.playUrl!.isNotEmpty &&
             !CoverCacheManager().isPlayCached(video.playUrl!)) {
-          // ✅ 使用 Isolate 在后台线程执行 getm3u8（不阻塞主线程）
+          // ✅ 使用 compute() 在后台线程执行 getm3u8（不阻塞主线程）
           Future.microtask(() async {
             try {
-              final palyData = await CryptoIsolateService.instance.getm3u8(
+              final palyData = await CryptoComputeService.instance.getm3u8(
                 config.playDomain,
                 video.playUrl!,
               );
@@ -593,10 +595,10 @@ class ShortVideoListState extends State<ShortVideoList> {
       debugPrint("isVideoUrlValid: $isVideoUrlValid");
       debugPrint("nextVideoUrl旧: ${nextVideo.videoUrl}");
       if (!isVideoUrlValid) {
-        // ✅ 使用 Isolate 在后台线程执行 getm3u8（不阻塞主线程）
+        // ✅ 使用 compute() 在后台线程执行 getm3u8（不阻塞主线程）
         Future.microtask(() async {
           try {
-            final palyData = await CryptoIsolateService.instance.getm3u8(
+            final palyData = await CryptoComputeService.instance.getm3u8(
               config.playDomain,
               nextVideo.playUrl!,
             );

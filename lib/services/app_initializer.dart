@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shunle/services/video_api_service.dart';
-import 'package:shunle/services/crypto_isolate_service.dart';
+import 'package:shunle/services/crypto_compute_service.dart';
 
 /// 应用初始化服务
 /// 提供应用启动时的各种初始化功能
@@ -10,9 +10,11 @@ class AppInitializer {
   ///
   /// [context] 可选的 BuildContext，用于显示加载提示
   /// [showLoading] 是否显示加载指示器
+  /// [onProgressUpdate] 进度更新回调
   static Future<void> initialize({
     BuildContext? context,
     bool showLoading = true,
+    Function(String step, double progress)? onProgressUpdate,
   }) async {
     debugPrint('开始应用初始化...');
 
@@ -21,19 +23,26 @@ class AppInitializer {
     }
 
     try {
-      // ✅ 1. 初始化加密 Isolate（必须首先初始化）
+      // ✅ 1. 初始化加密服务（必须首先初始化）- 20%
+      onProgressUpdate?.call('初始化加密服务...', 0.2);
       await _initializeCryptoIsolate();
 
-      // 2. 获取配置
+      // 2. 获取配置 - 50%
+      onProgressUpdate?.call('获取应用配置...', 0.5);
       await _fetchConfig();
 
-      // 3. 其他初始化任务
+      // 3. 其他初始化任务 - 90%
+      onProgressUpdate?.call('完成其他初始化...', 0.9);
       await _performOtherInitializations();
+
+      // 完成 - 100%
+      onProgressUpdate?.call('初始化完成！', 1.0);
 
       debugPrint('应用初始化完成');
     } catch (e) {
       debugPrint('应用初始化失败: $e');
-      rethrow;
+      // 不再 rethrow，让应用能够正常启动
+      // 即使初始化失败，用户也应该能够使用应用
     } finally {
       if (showLoading && context != null) {
         _hideLoadingIndicator(context);
@@ -45,7 +54,7 @@ class AppInitializer {
   static Future<void> _initializeCryptoIsolate() async {
     debugPrint('正在初始化加密 Isolate...');
     try {
-      await CryptoIsolateService.instance.initialize();
+      await CryptoComputeService.instance.initialize();
       debugPrint('✅ 加密 Isolate 初始化成功');
     } catch (e) {
       debugPrint('❌ 加密 Isolate 初始化失败: $e');

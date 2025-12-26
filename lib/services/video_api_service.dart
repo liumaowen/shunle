@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shunle/providers/global_config.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/utils/crypto/uuid_utils.dart';
-import 'package:shunle/services/crypto_isolate_service.dart';
+import 'package:shunle/services/crypto_compute_service.dart';
 
 /// 视频 API 服务，封装所有视频数据的网络请求
 class VideoApiService {
@@ -109,7 +109,9 @@ class VideoApiService {
       if (response.statusCode == 200) {
         final text = response.body;
         // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoIsolateService.instance.decrypt(text);
+        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+          text,
+        );
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
         // 提取数据
@@ -118,7 +120,7 @@ class VideoApiService {
 
         // ✅ 使用 Isolate 生成所有 m3u8 URL
         for (final element in dataList) {
-          element['link'] = await CryptoIsolateService.instance.getm3u8(
+          element['link'] = await CryptoComputeService.instance.getm3u8(
             config.playDomain,
             element['playUrl'],
           );
@@ -168,7 +170,9 @@ class VideoApiService {
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
       };
       // ✅ 使用 Isolate 加密（不阻塞主线程）
-      final String aesform = await CryptoIsolateService.instance.encrypt(json.encode(dramaForm));
+      final String aesform = await CryptoComputeService.instance.encrypt(
+        json.encode(dramaForm),
+      );
       // 发送 POST 请求
       final response = await http
           .post(uri, headers: headers, body: aesform)
@@ -176,7 +180,9 @@ class VideoApiService {
       if (response.statusCode == 200) {
         final text = response.body;
         // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoIsolateService.instance.decrypt(text);
+        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+          text,
+        );
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
         // 提取数据
@@ -185,7 +191,7 @@ class VideoApiService {
 
         // ✅ 使用 Isolate 生成所有 m3u8 URL
         for (final element in dataList) {
-          element['link'] = await CryptoIsolateService.instance.getm3u8(
+          element['link'] = await CryptoComputeService.instance.getm3u8(
             config.playDomain,
             element['first']['playUrl'],
           );
@@ -240,7 +246,7 @@ class VideoApiService {
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
       };
       // ✅ 使用 Isolate 加密（不阻塞主线程）
-      final String aesform = await CryptoIsolateService.instance.encrypt(
+      final String aesform = await CryptoComputeService.instance.encrypt(
         json.encode({"Id": dramaId}),
       );
       // 发送 POST 请求
@@ -250,7 +256,9 @@ class VideoApiService {
       if (response.statusCode == 200) {
         final text = response.body;
         // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoIsolateService.instance.decrypt(text);
+        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+          text,
+        );
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
         // 提取数据
@@ -261,7 +269,7 @@ class VideoApiService {
         for (var i = 0; i < dataList.length; i++) {
           final element = dataList[i];
           if (i < 5) {
-            element['link'] = await CryptoIsolateService.instance.getm3u8(
+            element['link'] = await CryptoComputeService.instance.getm3u8(
               config.playDomain,
               element['playUrl'],
             );
@@ -332,14 +340,18 @@ class VideoApiService {
           .post(
             uri,
             headers: headers,
-            body: await CryptoIsolateService.instance.encrypt(json.encode({"Id": dramaId})),
+            body: await CryptoComputeService.instance.encrypt(
+              json.encode({"Id": dramaId}),
+            ),
           )
           .timeout(timeout);
 
       if (response.statusCode == 200) {
         final text = response.body;
         // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoIsolateService.instance.decrypt(text);
+        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+          text,
+        );
         final jsonData = json.decode(decryptedPassword);
         final dramaData = jsonData?['data'];
 
@@ -397,7 +409,9 @@ class VideoApiService {
       if (response.statusCode == 200) {
         final text = response.body;
         // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoIsolateService.instance.decrypt(text);
+        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+          text,
+        );
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
         // 提取数据
@@ -439,7 +453,7 @@ class VideoApiService {
   static List<VideoApiProvider> API_PROVIDERS = [
     VideoApiProviderImpl(
       name: 'Kuaishou',
-      enabled: true,
+      enabled: false,
       fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
         return VideoApiService.fetchVideos(
           page: page ?? '1',
@@ -449,7 +463,7 @@ class VideoApiService {
     ),
     VideoApiProviderImpl(
       name: 'Mgtv',
-      enabled: false,
+      enabled: true,
       fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
         int pageindex =
             (Random().nextDouble() *
