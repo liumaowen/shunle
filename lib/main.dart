@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import "package:flutter/services.dart";
 import 'package:shunle/splash_screen.dart';
@@ -27,10 +29,33 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: '顺乐短剧',
+    return MaterialApp(
+      title: '瞬乐',
+      theme: ThemeData(
+        fontFamily: 'Roboto',
+        primaryColor: Colors.white, // 改成你想要的颜色
+      ),
+      // 设置深色主题
+      darkTheme: ThemeData.dark().copyWith(
+        // 你可以在这里自定义深色主题样式
+        primaryColor: Colors.white,
+        scaffoldBackgroundColor: Colors.black,
+        colorScheme: ColorScheme.dark(),
+      ),
+      // 使用深色主题
+      themeMode: ThemeMode.dark,
+      scrollBehavior: MyScrollBehavior(),
       home: SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
+}
+
+class MyScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+  };
 }

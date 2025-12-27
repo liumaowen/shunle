@@ -172,7 +172,7 @@ class _SplashLoadingWidgetState extends State<SplashLoadingWidget>
   /// 构建应用名称
   Widget _buildAppName() {
     return Text(
-      '顺乐短剧',
+      '瞬乐',
       style: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.bold,

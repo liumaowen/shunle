@@ -50,7 +50,9 @@ class _DramaDetailPageState extends State<DramaDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 应用深色主题
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           Positioned.fill(

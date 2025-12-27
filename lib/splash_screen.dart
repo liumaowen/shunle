@@ -2,7 +2,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:shunle/tabs.dart';
-import 'package:shunle/widgets/splash_loading_with_progress.dart';
+import 'package:shunle/widgets/splash_loading_widget.dart';
 import 'package:shunle/services/app_initializer.dart';
 
 /// 启动页面
@@ -12,15 +12,7 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '顺乐短剧',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: const SplashContent(),
-      debugShowCheckedModeBanner: false,
-    );
+    return const SplashContent();
   }
 }
 
@@ -33,12 +25,25 @@ class SplashContent extends StatefulWidget {
 }
 
 class _SplashContentState extends State<SplashContent> {
+  double _progress = 0.0;
+  String _currentStep = '正在初始化...';
+  bool _isInitialized = false;
+  Future<void>? _initializationFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _startInitialization();
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<void>(
-      future: _initializeApp(),
+      future: _initializationFuture,
       builder: (context, snapshot) {
+        // debugPrint('启动内容组件构建...${snapshot.connectionState}');
         if (snapshot.connectionState == ConnectionState.done) {
+          debugPrint('启动内容组件完成,跳转到主应用');
           // 初始化完成后立即跳转
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _navigateToMain();
@@ -53,12 +58,21 @@ class _SplashContentState extends State<SplashContent> {
         }
 
         // 显示加载界面
-        return SplashLoadingWithProgress(
-          onInitialized: _navigateToMain,
-          onStepUpdate: _onStepUpdate,
+        return SplashLoadingWidget(
+          loadingText: _currentStep,
+          showProgress: true,
+          progress: _progress,
         );
       },
     );
+  }
+
+  /// 开始初始化
+  void _startInitialization() {
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _initializationFuture = _initializeApp();
+    }
   }
 
   /// 初始化应用
@@ -83,6 +97,12 @@ class _SplashContentState extends State<SplashContent> {
 
   /// 处理步骤更新
   void _onStepUpdate(String step, double progress) {
-    debugPrint('初始化进度: ${(progress * 100).toStringAsFixed(0)}% - $step');
+    if (mounted) {
+      setState(() {
+        _currentStep = step;
+        _progress = progress;
+      });
+      debugPrint('初始化进度: ${(progress * 100).toStringAsFixed(0)}% - $step');
+    }
   }
 }
