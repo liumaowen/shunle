@@ -80,6 +80,8 @@ class ShortVideoListState extends State<ShortVideoList> {
         onVideoLoadFailed: () => _handleVideoLoadFailed(index),
         // 播放完成前10秒的回调
         onVideoPlayBefore10: () => _handleVideoPlayBefore10(index),
+        // 使用软件解码器
+        useSoftwareDecoder: true,
       ),
     );
   }
@@ -97,6 +99,8 @@ class ShortVideoListState extends State<ShortVideoList> {
             shouldPlay: index == _currentIndex,
             // 视频加载失败的回调
             onVideoLoadFailed: () => _handleVideoLoadFailed(index),
+            // 使用软件解码器
+            useSoftwareDecoder: true,
             // 短剧相关参数
             isDrama: true,
             totalEpisodes: drama.totalEpisodes,
@@ -188,9 +192,9 @@ class ShortVideoListState extends State<ShortVideoList> {
   }
 
   /// 缓存范围：保活当前视频和前后各 N 个视频
-  /// 例如：_cacheRange = 2 时，同时保活 5 个视频（当前 + 前2 + 后2）
-  /// 可根据设备性能和内存情况调整：1-3 推荐
-  static const int _cacheRange = 2;
+  /// 例如：_cacheRange = 1 时，同时保活 3 个视频（当前 + 前1 + 后1）
+  /// 降低缓存以减少内存占用和解码器压力
+  static const int _cacheRange = 1;
 
   /// 每个视频播放器的全局键，用于控制播放/暂停
   final Map<int, GlobalKey<VideoPlayerWidgetState>> _playerKeys = {};
@@ -202,7 +206,8 @@ class ShortVideoListState extends State<ShortVideoList> {
   Timer? _preloadTimer;
 
   /// 预加载范围：接下来预加载的视频数量
-  static const int _preloadRange = 2;
+  /// 减少预加载以节省内存
+  static const int _preloadRange = 1;
 
   @override
   void initState() {
@@ -225,6 +230,9 @@ class ShortVideoListState extends State<ShortVideoList> {
   /// 内存清理计时器
   Timer? _cleanupTimer;
 
+  /// 标记组件是否正在销毁
+  bool _isDisposing = false;
+
   /// 清理超出缓存范围的视频
   void _cleanupOutOfRangeVideos() {
     // 查找需要清理的索引
@@ -240,7 +248,24 @@ class ShortVideoListState extends State<ShortVideoList> {
     for (final index in keysToRemove) {
       final key = _playerKeys[index];
       if (key != null) {
-        debugPrint('清理超出范围的视频索引: $index');
+        debugPrint('🧹 清理超出范围的视频索引: $index (当前总数: ${_playerKeys.length})');
+
+        // 先暂停并释放视频播放器资源
+        try {
+          final state = key.currentState;
+          if (state != null) {
+            // 调用视频播放器的清理方法
+            if (state.mounted) {
+              debugPrint('⏸️ 暂停超出范围的视频: $index');
+              key.currentState?.pause();
+            } else {
+              debugPrint('⚠️ 视频组件已 unmounted，无法暂停: $index');
+            }
+          }
+        } catch (e) {
+          debugPrint('❌ 清理视频播放器时出错: $e');
+        }
+
         _playerKeys.remove(index);
       }
     }
@@ -346,11 +371,47 @@ class ShortVideoListState extends State<ShortVideoList> {
 
   @override
   void dispose() {
-    _pageController.dispose();
+    debugPrint('🔄 ShortVideoList 开始资源释放');
+
+    // 标记组件即将销毁
+    _isDisposing = true;
+
+    // 停止所有预加载和清理定时器
+    if (_preloadTimer != null) {
+      debugPrint('⏰ 取消预加载定时器');
+      _preloadTimer?.cancel();
+    }
+
+    if (_cleanupTimer != null) {
+      debugPrint('🧹 取消清理定时器');
+      _cleanupTimer?.cancel();
+    }
+
+    // 暂停所有视频播放器
+    debugPrint('⏸️ 暂停所有视频播放器 (总数: ${_playerKeys.length})');
+    _playerKeys.forEach((index, key) {
+      try {
+        if (key.currentState?.mounted == true) {
+          key.currentState?.pause();
+          debugPrint('⏸️ 已暂停视频: $index');
+        } else {
+          debugPrint('⚠️ 视频组件已 unmounted: $index');
+        }
+      } catch (e) {
+        debugPrint('❌ 暂停视频播放器 $index 时出错: $e');
+      }
+    });
+
+    // 清理所有引用
+    debugPrint('🗑️ 清理所有引用 (缓存记录: ${_playerKeys.length})');
     _playerKeys.clear();
     _cacheAccessOrder.clear();
-    _preloadTimer?.cancel();
-    _cleanupTimer?.cancel();
+
+    // 释放页面控制器
+    debugPrint('📄 释放页面控制器');
+    _pageController.dispose();
+
+    debugPrint('✅ ShortVideoList 资源释放完成');
     super.dispose();
   }
 

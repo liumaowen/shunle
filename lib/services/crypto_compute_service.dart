@@ -38,26 +38,26 @@ class CryptoComputeService {
   Future<String> encrypt(String plaintext) async {
     await initialize();
 
-    if (kIsWeb) {
-      // Web 端直接使用 AesEncryptSimple
-      return AesEncryptSimple.encrypt(plaintext);
-    }
+    // if (kIsWeb) {
+    // Web 端直接使用 AesEncryptSimple
+    return AesEncryptSimple.encrypt(plaintext);
+    // }
 
     // Android 端使用 compute
-    return await compute(_encryptInWorker, plaintext);
+    // return await compute(_encryptInWorker, plaintext);
   }
 
   /// 异步解密
   Future<String> decrypt(String ciphertext) async {
     await initialize();
 
-    if (kIsWeb) {
-      // Web 端直接使用 AesEncryptSimple
-      return AesEncryptSimple.decrypt(ciphertext);
-    }
+    // if (kIsWeb) {
+    // Web 端直接使用 AesEncryptSimple
+    return AesEncryptSimple.decrypt(ciphertext);
+    // }
 
     // Android 端使用 compute
-    return await compute(_decryptInWorker, ciphertext);
+    // return await compute(_decryptInWorker, ciphertext);
   }
 
   /// 异步生成 m3u8 URL
@@ -68,17 +68,17 @@ class CryptoComputeService {
   }) async {
     await initialize();
 
-    if (kIsWeb) {
-      // Web 端直接使用 AesEncryptSimple
-      return AesEncryptSimple.getm3u8(baseapi, path, key: key);
-    }
+    // if (kIsWeb) {
+    // Web 端直接使用 AesEncryptSimple
+    return AesEncryptSimple.getm3u8(baseapi, path, key: key);
+    // }
 
     // Android 端使用 compute
-    return await compute(_getm3u8InWorker, {
-      'baseapi': baseapi,
-      'path': path,
-      'key': key,
-    });
+    // return await compute(_getm3u8InWorker, {
+    //   'baseapi': baseapi,
+    //   'path': path,
+    //   'key': key,
+    // });
   }
 
   /// 在 Isolate 中运行的加密函数

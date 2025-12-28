@@ -1,6 +1,7 @@
 import "dart:ui";
 
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 import "package:shunle/drama/drama.dart";
 import "package:shunle/home/home.dart";
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
@@ -104,6 +105,14 @@ class _TabsState extends State<Tabs> {
       theme: ThemeData(
         fontFamily: 'Roboto',
         primaryColor: Colors.white, // 改成你想要的颜色
+        // 设置状态栏颜色
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
+          ),
+        ),
       ),
       // 设置深色主题
       darkTheme: ThemeData.dark().copyWith(
@@ -111,6 +120,14 @@ class _TabsState extends State<Tabs> {
         primaryColor: Colors.white,
         scaffoldBackgroundColor: Colors.black,
         colorScheme: ColorScheme.dark(),
+        // 设置状态栏颜色
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+        ),
       ),
       // 使用深色主题
       themeMode: ThemeMode.dark,
@@ -119,7 +136,7 @@ class _TabsState extends State<Tabs> {
       home: PersistentTabView(
         tabs: _tabs,
         controller: _tabController,
-        onTabChanged:(value) => _onItemTapped(value),
+        onTabChanged: (value) => _onItemTapped(value),
         navBarBuilder: (navBarConfig) => Style1BottomNavBar(
           navBarConfig: navBarConfig,
           navBarDecoration: NavBarDecoration(

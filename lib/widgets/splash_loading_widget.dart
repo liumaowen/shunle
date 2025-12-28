@@ -61,15 +61,6 @@ class _SplashLoadingWidgetState extends State<SplashLoadingWidget>
 
   @override
   Widget build(BuildContext context) {
-    // 设置沉浸式状态栏
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(
-        statusBarColor: widget.backgroundColor ?? Colors.blue,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
-      ),
-    );
-
     return Scaffold(
       backgroundColor: widget.backgroundColor ?? Colors.blue,
       body: Center(
