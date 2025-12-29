@@ -194,7 +194,8 @@ class ShortVideoListState extends State<ShortVideoList> {
   /// 缓存范围：保活当前视频和前后各 N 个视频
   /// 例如：_cacheRange = 1 时，同时保活 3 个视频（当前 + 前1 + 后1）
   /// 降低缓存以减少内存占用和解码器压力
-  static const int _cacheRange = 1;
+  /// 根据 tab 类型动态设置
+  late int _cacheRange = 0;
 
   /// 每个视频播放器的全局键，用于控制播放/暂停
   final Map<int, GlobalKey<VideoPlayerWidgetState>> _playerKeys = {};
@@ -212,6 +213,10 @@ class ShortVideoListState extends State<ShortVideoList> {
   @override
   void initState() {
     super.initState();
+
+    // 根据 tab 类型动态设置缓存范围
+    _cacheRange = _getCacheRangeByTab(widget.tab);
+    debugPrint('📱 Tab: ${widget.tab.title}，缓存范围: $_cacheRange');
 
     // 监听页面滚动，实现无限加载
     _pageController.addListener(_onPageScroll);
@@ -232,6 +237,17 @@ class ShortVideoListState extends State<ShortVideoList> {
 
   /// 标记组件是否正在销毁
   bool _isDisposing = false;
+
+  /// 根据 tab 类型获取缓存范围
+  /// 短剧类型使用更激进的缓存（只保活当前视频）以节省内存
+  /// 普通视频类型保活当前 + 前后各1个，保证滑动流畅性
+  int _getCacheRangeByTab(TabsType tab) {
+    if (tab.isDramaType) {
+      return 0; // 短剧：只缓存当前视频，节省内存
+    } else {
+      return 1; // 普通视频：缓存当前 + 前后各1个
+    }
+  }
 
   /// 清理超出缓存范围的视频
   void _cleanupOutOfRangeVideos() {
