@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shunle/providers/video_manager.dart';
 import 'package:shunle/widgets/video_data.dart';
 import '../providers/video_list_provider.dart';
 import '../widgets/short_video_list.dart';
@@ -92,31 +93,35 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // 底层：全屏视频列表 PageView
-        Positioned.fill(
-          child: SafeArea(
-            bottom: false, // 只在顶部预留空间给状态栏
-            child: PageView.builder(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(), // 禁止 PageView 手动滑动
-              itemCount: widget.tabs.length,
-              itemBuilder: (context, index) {
-                return _buildTabContent(index);
-              },
+    return Consumer<VideoManager>(
+      builder: (context, videoManager, child) {
+        return Stack(
+          children: [
+            // 底层：全屏视频列表 PageView
+            Positioned.fill(
+              child: SafeArea(
+                bottom: false, // 只在顶部预留空间给状态栏
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(), // 禁止 PageView 手动滑动
+                  itemCount: widget.tabs.length,
+                  itemBuilder: (context, index) {
+                    return _buildTabContent(index,videoManager);
+                  },
+                ),
+              ),
             ),
-          ),
-        ),
 
-        // 上层：悬浮透明 Tab 条
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(child: _buildFloatTabBar()),
-        ),
-      ],
+            // 上层：悬浮透明 Tab 条
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(child: _buildFloatTabBar()),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -190,12 +195,16 @@ class _HomeFloatTabsState extends State<HomeFloatTabs> {
   }
 
   /// 构建tab内容（短视频列表）
-  Widget _buildTabContent(int index) {
+  Widget _buildTabContent(int index, VideoManager videoManager) {
     // 使用 ChangeNotifierProvider.value 传入预创建的 Provider 实例
     // 这样切换 Tab 时不会销毁旧 Provider，避免 "already disposed" 错误
     return ChangeNotifierProvider<VideoListProvider>.value(
       value: _providers[index]!,
-      child: ShortVideoList(key: _videoListKeys[index], tab: widget.tabs[index]),
+      child: ShortVideoList(
+        key: _videoListKeys[index],
+        tab: widget.tabs[index],
+        videoManager: videoManager,
+      ),
     );
   }
 }
