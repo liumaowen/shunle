@@ -50,12 +50,26 @@ class ShortVideoListState extends State<ShortVideoList> {
 
   /// 暂停当前播放的视频
   void pauseCurrentVideo() {
-    _playerKeys[_currentIndex]?.currentState?.pause();
+    debugPrint('⏸️ ShortVideoList.pauseCurrentVideo() 当前索引: $_currentIndex');
+    final playerState = _playerKeys[_currentIndex]?.currentState;
+    if (playerState != null) {
+      debugPrint('✅ 找到视频播放器状态，执行暂停：${playerState.widget.video.description}');
+      playerState.pause();
+    } else {
+      debugPrint('❌ 未找到视频播放器状态，当前缓存数量: ${_playerKeys.length}');
+    }
   }
 
   /// 播放当前视频
   void playCurrentVideo() {
-    _playerKeys[_currentIndex]?.currentState?.play();
+    debugPrint('▶️ ShortVideoList.playCurrentVideo() 当前索引: $_currentIndex');
+    final playerState = _playerKeys[_currentIndex]?.currentState;
+    if (playerState != null) {
+      debugPrint('✅ 找到视频播放器状态，执行播放：${playerState.widget.video.description}');
+      playerState.play();
+    } else {
+      debugPrint('❌ 未找到视频播放器状态，当前缓存数量: ${_playerKeys.length}');
+    }
   }
 
   /// 根据视频类型构建不同的视频项目
@@ -80,8 +94,6 @@ class ShortVideoListState extends State<ShortVideoList> {
         onVideoLoadFailed: () => _handleVideoLoadFailed(index),
         // 播放完成前10秒的回调
         onVideoPlayBefore10: () => _handleVideoPlayBefore10(index),
-        // 使用软件解码器
-        useSoftwareDecoder: true,
       ),
     );
   }
@@ -99,8 +111,6 @@ class ShortVideoListState extends State<ShortVideoList> {
             shouldPlay: index == _currentIndex,
             // 视频加载失败的回调
             onVideoLoadFailed: () => _handleVideoLoadFailed(index),
-            // 使用软件解码器
-            useSoftwareDecoder: true,
             // 短剧相关参数
             isDrama: true,
             totalEpisodes: drama.totalEpisodes,
@@ -195,7 +205,7 @@ class ShortVideoListState extends State<ShortVideoList> {
   /// 例如：_cacheRange = 1 时，同时保活 3 个视频（当前 + 前1 + 后1）
   /// 降低缓存以减少内存占用和解码器压力
   /// 根据 tab 类型动态设置
-  late int _cacheRange = 0;
+  final int _cacheRange = 1;
 
   /// 每个视频播放器的全局键，用于控制播放/暂停
   final Map<int, GlobalKey<VideoPlayerWidgetState>> _playerKeys = {};
@@ -213,10 +223,6 @@ class ShortVideoListState extends State<ShortVideoList> {
   @override
   void initState() {
     super.initState();
-
-    // 根据 tab 类型动态设置缓存范围
-    _cacheRange = _getCacheRangeByTab(widget.tab);
-    debugPrint('📱 Tab: ${widget.tab.title}，缓存范围: $_cacheRange');
 
     // 监听页面滚动，实现无限加载
     _pageController.addListener(_onPageScroll);
@@ -237,17 +243,6 @@ class ShortVideoListState extends State<ShortVideoList> {
 
   /// 标记组件是否正在销毁
   bool _isDisposing = false;
-
-  /// 根据 tab 类型获取缓存范围
-  /// 短剧类型使用更激进的缓存（只保活当前视频）以节省内存
-  /// 普通视频类型保活当前 + 前后各1个，保证滑动流畅性
-  int _getCacheRangeByTab(TabsType tab) {
-    if (tab.isDramaType) {
-      return 0; // 短剧：只缓存当前视频，节省内存
-    } else {
-      return 1; // 普通视频：缓存当前 + 前后各1个
-    }
-  }
 
   /// 清理超出缓存范围的视频
   void _cleanupOutOfRangeVideos() {

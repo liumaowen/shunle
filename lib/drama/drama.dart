@@ -10,15 +10,6 @@ class Drams extends StatefulWidget {
   @override
   State<Drams> createState() => _DramsState();
 
-  /// 暂停当前正在播放的视频
-  static void pauseAllVideos(BuildContext context) {
-    context.findAncestorStateOfType<_DramsState>()?._pauseAllVideos();
-  }
-
-  /// 恢复当前视频的播放
-  static void playCurrentVideo(BuildContext context) {
-    context.findAncestorStateOfType<_DramsState>()?._playCurrentVideo();
-  }
 }
 
 class _DramsState extends State<Drams> {

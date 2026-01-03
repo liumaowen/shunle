@@ -47,31 +47,31 @@ class _SplashLoadingWithProgressState extends State<SplashLoadingWithProgress> {
     try {
       // 步骤 1: 初始化全局配置 (10%)
       await _updateProgress('初始化全局配置...', 0.1);
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // 步骤 2: 初始化加密服务 (20%)
       await _updateProgress('初始化加密服务...', 0.2);
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 0));
 
       // 步骤 3: 初始化网络服务 (30%)
       await _updateProgress('初始化网络服务...', 0.3);
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 0));
 
       // 步骤 4: 初始化缓存服务 (50%)
       await _updateProgress('初始化缓存服务...', 0.5);
-      await Future.delayed(const Duration(milliseconds: 400));
+      await Future.delayed(const Duration(milliseconds: 0));
 
       // 步骤 5: 加载用户数据 (70%)
       await _updateProgress('加载用户数据...', 0.7);
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 0));
 
       // 步骤 6: 预加载热门内容 (90%)
       await _updateProgress('预加载热门内容...', 0.9);
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 0));
 
       // 步骤 7: 初始化完成 (100%)
       await _updateProgress('初始化完成，即将进入应用...', 1.0);
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 0));
 
       // 初始化完成，跳转到主应用
       if (mounted) {

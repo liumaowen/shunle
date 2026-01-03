@@ -6,21 +6,22 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
+import 'package:provider/provider.dart';
 import 'package:shunle/drama/drama_detail_page.dart';
-import 'package:shunle/providers/global_config.dart';
+import 'package:shunle/providers/video_manager.dart';
 import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'video_data.dart';
-import '../services/crypto_compute_service.dart';
-import '../utils/cover_cache_manager.dart';
 
 /// 视频播放器 Widget
 /// 使用 VideoPlayer 实现视频播放，自定义 UI 控制
-class VideoPlayerWidget extends StatefulWidget {
-  /// 测试视频数据
-  final int len;
-
+class OptimizedVideoPlayerWidget extends StatefulWidget {
   /// 视频数据
   final VideoData video;
+
+  final String tabId;
+
+  final int listIndex;
 
   /// 是否应该播放（由父组件控制）
   final bool shouldPlay;
@@ -43,10 +44,14 @@ class VideoPlayerWidget extends StatefulWidget {
   /// 集数切换回调
   final Function(int)? onEpisodeChange;
 
-  const VideoPlayerWidget({
+  /// 是否使用软件解码器
+  final bool useSoftwareDecoder;
+
+  const OptimizedVideoPlayerWidget({
     super.key,
-    required this.len,
     required this.video,
+    required this.tabId,
+    required this.listIndex,
     required this.shouldPlay,
     this.onVideoLoadFailed,
     this.onVideoPlayBefore10,
@@ -54,15 +59,17 @@ class VideoPlayerWidget extends StatefulWidget {
     this.totalEpisodes,
     this.currentEpisode,
     this.onEpisodeChange,
+    this.useSoftwareDecoder = false,
   });
 
   @override
-  State<VideoPlayerWidget> createState() => VideoPlayerWidgetState();
+  State<OptimizedVideoPlayerWidget> createState() =>
+      OptimizedVideoPlayerWidgetState();
 }
 
 /// 视频播放器状态类
 /// 使用 AutomaticKeepAliveClientMixin 保持组件状态，实现视频缓存
-class VideoPlayerWidgetState extends State<VideoPlayerWidget>
+class OptimizedVideoPlayerWidgetState extends State<OptimizedVideoPlayerWidget>
     with AutomaticKeepAliveClientMixin {
   VideoPlayerController? _videoController;
   bool _isInitialized = false;
@@ -81,20 +88,27 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   // 标记组件是否正在销毁，防止回调在销毁后执行
   bool _isDisposing = false;
 
-  // 存储最后一个错误
-  dynamic _lastError;
+  // 追踪监听器是否已添加
+  bool _hasPositionListener = false;
+  bool _hasControllerUpdateListener = false;
+
+  // 🚨 缓存视频宽高比，避免每次都访问控制器
+  double _cachedVideoRatio = 1.0;
+
+  // 🚨 新增：缓存最近的可见度，用于初始化完成后重新处理
+  double _lastVisibleFraction = 0.0;
 
   @override
   void initState() {
     super.initState();
     if (mounted) {
       debugPrint('initstate:${widget.video.id}');
-      _initializePlayer();
+      initializeVideo();
     }
   }
 
   @override
-  void didUpdateWidget(VideoPlayerWidget oldWidget) {
+  void didUpdateWidget(OptimizedVideoPlayerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     // 当 shouldPlay 状态改变时，控制播放/暂停
@@ -109,8 +123,123 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     // 步骤1：检测视频 URL 是否变化，如果变化则重新加载
     if (widget.video.videoUrl != oldWidget.video.videoUrl) {
       debugPrint('视频 URL 已变化，重新加载: ${widget.video.videoUrl}');
-      loadVideo(widget.video);
+      initializeVideo();
     }
+  }
+
+  Future<void> initializeVideo() async {
+    // 🚨 关键：防止重复初始化
+    if (_isInitialized && _videoController != null) {
+      try {
+        // 检查控制器是否仍然有效
+        final _ = _videoController!.value.isInitialized;
+        debugPrint('✅ 控制器已初始化，跳过重新初始化');
+        return;
+      } catch (e) {
+        debugPrint('⚠️ 控制器无效，需要重新初始化: $e');
+        // 控制器无效，重置状态
+        setState(() {
+          _videoController = null;
+          _isInitialized = false;
+          _hasError = false;
+        });
+      }
+    }
+
+    if (!mounted) {
+      debugPrint('⚠️ Widget 已卸载，跳过初始化');
+      return;
+    }
+
+    final manager = Provider.of<VideoManager>(context, listen: false);
+    try {
+      _videoController = await manager.getController(
+        video: widget.video,
+        tabId: widget.tabId,
+        listIndex: widget.listIndex,
+      );
+
+      if (!mounted) return;
+
+      if (_videoController != null) {
+        try {
+          // 🚨 关键：检查控制器是否有效
+          if (!_videoController!.value.isInitialized) {
+            debugPrint('⚠️ 控制器未初始化，等待初始化完成');
+            return;
+          }
+
+          // 监听位置变化
+          if (!_hasPositionListener) {
+            _videoController!.addListener(_updatePosition);
+            _hasPositionListener = true;
+          }
+
+          if (mounted) {
+            setState(() {
+              _isInitialized = true;
+            });
+          }
+
+          // 🚨 新增：初始化完成后，重新检查可见性并触发播放
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_isDisposing) {
+              debugPrint('✅ 控制器初始化完成，重新处理可见性 (可见度: $_lastVisibleFraction)');
+              // 使用缓存的可见度值重新处理可见性变化
+              // 如果视频仍然可见，将自动播放；如果不可见，将停止播放
+              final manager = Provider.of<VideoManager>(context, listen: false);
+              manager.handleVideoVisibility(
+                video: widget.video,
+                tabId: widget.tabId,
+                visibleFraction: _lastVisibleFraction,
+                listIndex: widget.listIndex,
+              );
+            }
+          });
+        } catch (e) {
+          debugPrint('❌ 控制器访问失败（可能已释放）: $e');
+          if (mounted) {
+            _setError();
+          }
+        }
+      } else {
+        debugPrint('❌ 获取控制器失败，返回null');
+        if (mounted) {
+          _setError();
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ 视频初始化错误: $e');
+      if (mounted) {
+        _setError();
+      }
+    }
+  }
+
+  void _onControllerUpdate() {
+    if (_videoController != null &&
+        _videoController!.value.isInitialized &&
+        mounted) {
+      _videoController!.removeListener(_onControllerUpdate);
+      _hasControllerUpdateListener = false;
+      _videoController!.addListener(_updatePosition);
+      _hasPositionListener = true;
+      setState(() {
+        _isInitialized = true;
+      });
+    }
+  }
+
+  void _setError() {
+    setState(() {
+      _hasError = true;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isDisposing && mounted) {
+        widget.onVideoLoadFailed?.call();
+      }
+    });
   }
 
   /// 初始化视频播放器
@@ -160,12 +289,16 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       }
     } catch (e) {
       debugPrint('❌ 视频加载错误: $e');
-      _lastError = e;
 
       // 检查是否为解码器错误
       if (e.toString().contains('MediaCodec') ||
           e.toString().contains('decoder')) {
         debugPrint('🔄 检测到解码器错误...');
+
+        // 如果当前没有使用软件解码器，记录错误但不立即重试
+        if (!widget.useSoftwareDecoder) {
+          debugPrint('💡 提示: 可以尝试设置 useSoftwareDecoder=true 来使用软件解码器');
+        }
       }
 
       if (mounted) {
@@ -184,117 +317,50 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     }
   }
 
-  /// 尝试使用软件解码器重新初始化
-  Future<void> _retryWithSoftwareDecoder() async {
-    if (!mounted) return;
-
-    debugPrint('🔄 尝试使用软件解码器重新初始化...');
-
-    await _initializeWithSoftwareDecoder();
-  }
-
-  /// 使用软件解码器初始化
-  Future<void> _initializeWithSoftwareDecoder() async {
-    try {
-      debugPrint('🔄 使用软件解码器初始化...');
-
-      // 释放现有的控制器
-      _videoController?.dispose();
-
-      // 创建新的控制器
-      final videoUrl = widget.video.videoUrl;
-      _videoController = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
-      _videoController!.setLooping(true);
-      _videoController!.addListener(_updatePosition);
-
-      // 初始化播放器
-      await _videoController!.initialize();
-
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-          debugPrint('✅ 软件解码器初始化成功');
-          // 视频初始化完成后自动播放
-          if (widget.shouldPlay && !kIsWeb) {
-            _videoController!.play();
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint('❌ 软件解码器也失败了: $e');
-      _lastError = e;
-
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          debugPrint('软件解码器初始化失败:${widget.video.videoUrl}');
-        });
-      }
-    }
-  }
-
   /// 更新视频位置
   void _updatePosition() {
     if (_videoController != null && !_isSeeking) {
-      final newPosition = _videoController!.value.position;
-      if (newPosition != _currentPosition) {
-        _currentPosition = newPosition;
-        _positionNotifier.value = newPosition; // 通知监听器，不触发重建
+      try {
+        final newPosition = _videoController!.value.position;
+        if (newPosition != _currentPosition) {
+          _currentPosition = newPosition;
+          _positionNotifier.value = newPosition;
 
-        // 检查是否需要触发前10秒回调
-        final duration = _videoController!.value.duration;
-        if (duration.inSeconds > 10) {
-          // 确保视频时长超过10秒
-          final befor10 = duration.inSeconds - 10;
-          final currseconds = _currentPosition.inSeconds;
-          bool needjiemi = widget.video.needJiemi ?? false;
+          // 缓存视频宽高比
+          if (_videoController!.value.isInitialized) {
+            _cachedVideoRatio = _videoController!.value.aspectRatio;
+          }
 
-          // debugPrint("当前位置：${currseconds}");
-          // debugPrint("总时长：${duration.inSeconds}");
-          // debugPrint("是否需要解密：$needjiemi");
-          // debugPrint("befor10：$befor10");
+          // 检查是否需要触发前10秒回调
+          final duration = _videoController!.value.duration;
+          if (duration.inSeconds > 10) {
+            final befor10 = duration.inSeconds - 10;
+            final currseconds = _currentPosition.inSeconds;
+            bool needjiemi = widget.video.needJiemi ?? false;
 
-          /// 在播放完毕前10秒时，判断下一个视频是否有效
-          if (needjiemi && (currseconds == befor10)) {
-            // debugPrint("触发前10秒回调");
-
-            // 防抖：如果500ms内多次触发，只执行最后一次
-            _before10Timer?.cancel();
-            _before10Timer = Timer(const Duration(milliseconds: 500), () {
-              // debugPrint("播放完毕前10秒 - 执行回调");
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                // 检查组件是否正在销毁，防止回调在销毁后执行
-                if (!_isDisposing && mounted) {
-                  widget.onVideoPlayBefore10?.call();
-                }
+            if (needjiemi && (currseconds == befor10)) {
+              _before10Timer?.cancel();
+              _before10Timer = Timer(const Duration(milliseconds: 500), () {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!_isDisposing && mounted) {
+                    widget.onVideoPlayBefore10?.call();
+                  }
+                });
               });
-            });
+            }
           }
         }
+      } catch (e) {
+        debugPrint('⚠️ 更新位置时出错（控制器可能已释放）: $e');
       }
     }
-  }
-
-  /// 异步加载封面数据（已弃用，保留以避免破坏性更改）
-  @deprecated
-  Future<void> _loadCoverAsync() async {
-    // 此方法已被注释掉，暂时保留
-  }
-
-  /// 异步加载封面数据（已弃用，保留以避免破坏性更改）
-  @deprecated
-  Future<void> _loadPlayAsync() async {
-    // 此方法已被注释掉，暂时保留
   }
 
   /// 播放视频
   void play() {
     _videoController?.play();
     if (mounted) {
-      setState(() {
-        // 标记为应该播放，确保页面切换回来时能继续播放
-        // 注意：shouldPlay 参数由父组件控制，这里只负责直接播放
-      });
+      setState(() {});
     }
   }
 
@@ -302,9 +368,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   void pause() {
     _videoController?.pause();
     if (mounted) {
-      setState(() {
-        // 标记为暂停状态
-      });
+      setState(() {});
     }
   }
 
@@ -332,25 +396,13 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
               },
               child: const Text('重试'),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             // 如果是解码器错误，显示使用软件解码器的选项
-            if (_isDecoderError)
-              OutlinedButton(
-                onPressed: () {
-                  _retryWithSoftwareDecoder();
-                },
-                child: const Text('使用软件解码器'),
-              ),
+            ElevatedButton(onPressed: initializeVideo, child: const Text('重试')),
           ],
         ),
       ),
     );
-  }
-
-  /// 是否为解码器错误
-  bool get _isDecoderError {
-    return _lastError?.toString().contains('MediaCodec') == true ||
-        _lastError?.toString().contains('decoder') == true;
   }
 
   /// 视频封面
@@ -559,15 +611,25 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   void loadVideo(VideoData newVideo) {
     debugPrint('🔄 开始重新加载视频: ${newVideo.id}');
 
-    // 先暂停当前视频
-    _videoController?.pause();
+    try {
+      // 先暂停当前视频
+      _videoController?.pause();
 
-    // 清理之前的资源
-    _before10Timer?.cancel();
-    _videoController?.removeListener(_updatePosition);
-    _videoController?.dispose();
+      // 清理之前的资源
+      _before10Timer?.cancel();
+      if (_hasPositionListener) {
+        _videoController?.removeListener(_updatePosition);
+        _hasPositionListener = false;
+      }
+      if (_hasControllerUpdateListener) {
+        _videoController?.removeListener(_onControllerUpdate);
+        _hasControllerUpdateListener = false;
+      }
+    } catch (e) {
+      debugPrint('⚠️ 清理监听器时出错: $e');
+    }
 
-    // 重置状态
+    // 重置状态（不释放控制器，由 VideoManager 管理）
     setState(() {
       _videoController = null;
       _isInitialized = false;
@@ -576,8 +638,31 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       _isDisposing = false; // 重置销毁标记
     });
 
-    // 重新初始化
-    _initializePlayer();
+    // 重新初始化（使用 VideoManager 系统）
+    initializeVideo();
+  }
+
+  void _onVisibilityChanged(VisibilityInfo info) {
+    debugPrint('👀 视频可见性变化: ${widget.video.id}');
+    debugPrint ('👀 视频可见度: ${info.visibleFraction}');
+
+    // 🚨 新增：缓存可见度，用于初始化完成后重新处理
+    _lastVisibleFraction = info.visibleFraction;
+
+    // 检查组件是否已卸载或正在销毁，防止在销毁后访问 context
+    if (!mounted || _isDisposing) {
+      return;
+    }
+
+    final manager = Provider.of<VideoManager>(context, listen: false);
+
+    // 通知管理器可见性变化
+    manager.handleVideoVisibility(
+      video: widget.video,
+      tabId: widget.tabId,
+      visibleFraction: info.visibleFraction,
+      listIndex: widget.listIndex,
+    );
   }
 
   @override
@@ -586,11 +671,20 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     _isDisposing = true;
     debugPrint('🔴 开始释放 VideoPlayerWidget 资源: ${widget.video.id}');
 
-    // 释放播放器资源
-    if (_videoController != null) {
-      debugPrint('📹 释放 VideoPlayerController');
-      _videoController?.removeListener(_updatePosition);
-      _videoController?.dispose();
+    try {
+      // 清理监听器（但不释放控制器本身，由 VideoManager 管理）
+      if (_hasPositionListener && _videoController != null) {
+        debugPrint('📹 移除位置监听器');
+        _videoController?.removeListener(_updatePosition);
+        _hasPositionListener = false;
+      }
+      if (_hasControllerUpdateListener && _videoController != null) {
+        debugPrint('📹 移除控制器更新监听器');
+        _videoController?.removeListener(_onControllerUpdate);
+        _hasControllerUpdateListener = false;
+      }
+    } catch (e) {
+      debugPrint('⚠️ 清理监听器时出错: $e');
     }
 
     // 释放ValueNotifier资源
@@ -621,33 +715,85 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       return _buildErrorWidget();
     }
 
+    // 🚨 关键：检查控制器是否仍然有效
+    if (_isInitialized && _videoController != null) {
+      try {
+        // 尝试访问控制器属性，检查是否已被释放
+        final _ = _videoController!.value.isInitialized;
+      } catch (e) {
+        debugPrint('⚠️ 控制器已被释放，重置状态: $e');
+        // 控制器无效，重置状态
+        setState(() {
+          _videoController = null;
+          _isInitialized = false;
+          _hasError = false;
+        });
+
+        // 尝试重新初始化
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_isDisposing) {
+            initializeVideo();
+          }
+        });
+
+        return _buildLoadingPlaceholder();
+      }
+    }
+
     // 使用 LayoutBuilder 获取父容器约束
     return LayoutBuilder(
       builder: (context, constraints) {
         // 基础视频显示组件
         Widget videoWidget;
 
-        if (_isInitialized) {
-          // 获取视频宽高比
-          double videoRatio = _videoController!.value.aspectRatio;
-          // 判断视频比例，决定填充方式
-          // 9/16 = 0.5625，小于这个比例的竖屏视频铺满屏幕
-          bool isVerticalVideo = videoRatio <= 0.5625;
+        // 🚨 关键：在 build 时再次检查控制器是否有效（可能被 LRU 释放）
+        if (_isInitialized && _videoController != null) {
+          try {
+            // 尝试访问控制器属性，检查是否已被释放
+            final _ = _videoController!.value.isInitialized;
 
-          videoWidget = FittedBox(
-            fit: isVerticalVideo
-                ? BoxFit.cover
-                : BoxFit.contain, // 竖屏视频铺满，横屏保持比例
-            alignment: Alignment.center,
-            child: SizedBox(
-              width: videoRatio > 1.0 ? constraints.maxWidth : null,
-              height: videoRatio <= 1.0 ? constraints.maxHeight : null,
-              child: AspectRatio(
-                aspectRatio: videoRatio,
-                child: VideoPlayer(_videoController!),
+            // 🚨 使用缓存的宽高比，避免访问已释放的控制器
+            double videoRatio = _cachedVideoRatio;
+
+            // 如果缓存为默认值，尝试从控制器获取
+            if (_cachedVideoRatio == 1.0) {
+              try {
+                videoRatio = _videoController!.value.aspectRatio;
+                _cachedVideoRatio = videoRatio;
+              } catch (e) {
+                debugPrint('⚠️ 无法获取视频宽高比: $e');
+              }
+            }
+
+            // 使用 FittedBox 来强制视频按原始比例显示，防止拉伸
+            videoWidget = FittedBox(
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
+              child: SizedBox(
+                width: videoRatio > 1.0 ? constraints.maxWidth : null,
+                height: videoRatio <= 1.0 ? constraints.maxHeight : null,
+                child: AspectRatio(
+                  aspectRatio: videoRatio,
+                  child: VideoPlayer(_videoController!),
+                ),
               ),
-            ),
-          );
+            );
+          } catch (e) {
+            debugPrint('⚠️ 构建视频播放器失败（控制器可能被释放）: $e');
+            // 控制器已被释放，重置状态
+            setState(() {
+              _videoController = null;
+              _isInitialized = false;
+              _hasError = false;
+            });
+            // 尝试重新初始化
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && !_isDisposing) {
+                initializeVideo();
+              }
+            });
+            videoWidget = _buildLoadingPlaceholder();
+          }
         } else if (widget.video.cachedCover != null) {
           // 未初始化但有封面
           videoWidget = _buildCoverImage();
@@ -657,111 +803,126 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         }
 
         // 使用 Stack 布局，叠加其他UI元素
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            // 基础视频组件
-            videoWidget,
+        return VisibilityDetector(
+          key: Key('${widget.tabId}_${widget.video.id}'),
+          onVisibilityChanged: _onVisibilityChanged,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 基础视频组件
+              videoWidget,
 
-            // 视频封面层（仅在初始化前显示）
-            if (!_isInitialized && widget.video.cachedCover != null)
-              Positioned.fill(child: _buildCoverImage()),
+              // 视频封面层（仅在初始化前显示）
+              if (!_isInitialized && widget.video.cachedCover != null)
+                Positioned.fill(child: _buildCoverImage()),
 
-            // 播放/暂停按钮（仅在初始化后显示）
-            if (_isInitialized)
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (_videoController!.value.isPlaying) {
-                      _videoController!.pause();
-                    } else {
-                      _videoController!.play();
+              // 播放/暂停按钮（仅在初始化后显示）
+              if (_isInitialized)
+                GestureDetector(
+                  onTap: () {
+                    if (_videoController != null) {
+                      try {
+                        setState(() {
+                          if (_videoController!.value.isPlaying) {
+                            _videoController!.pause();
+                          } else {
+                            _videoController!.play();
+                          }
+                        });
+                      } catch (e) {
+                        debugPrint('⚠️ 播放/暂停失败: $e');
+                      }
                     }
-                  });
-                },
-                child: Center(
-                  child: Container(
-                    width: MediaQuery.of(context).size.width * 0.9,
-                    height: MediaQuery.of(context).size.height * 0.7,
-                    decoration: BoxDecoration(color: Colors.transparent),
-                    child: AnimatedOpacity(
-                      opacity: _videoController!.value.isPlaying ? 0.0 : 1.0,
-                      duration: const Duration(milliseconds: 80),
-                      child: Icon(
-                        Icons.play_arrow_rounded,
-                        size: 120,
-                        color: Colors.white.withValues(alpha: 0.5),
-                      ),
+                  },
+                  child: Center(
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.9,
+                      height: MediaQuery.of(context).size.height * 0.7,
+                      decoration: BoxDecoration(color: Colors.transparent),
+                      child: _videoController != null
+                          ? AnimatedOpacity(
+                              opacity: _videoController!.value.isPlaying
+                                  ? 0.0
+                                  : 1.0,
+                              duration: const Duration(milliseconds: 80),
+                              child: Icon(
+                                Icons.play_arrow_rounded,
+                                size: 120,
+                                color: Colors.white.withValues(alpha: 0.5),
+                              ),
+                            )
+                          : SizedBox.shrink(),
                     ),
                   ),
                 ),
-              ),
-            // 进度条（仅在初始化后显示）
-            if (_isInitialized) _buildProgressBar(),
-            // 短剧集数控制（仅在初始化后且为短剧时显示）
-            // if (_isInitialized && widget.isDrama) _buildEpisodeControls(),
-            // 视频信息叠加层（仅在初始化后显示）
-            if (_isInitialized && !_isSeeking)
-              Positioned(
-                bottom: 26,
-                left: 16,
-                right: 16,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 视频描述
-                    Text(
-                      widget.video.description,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
+              // 进度条（仅在初始化后显示）
+              if (_isInitialized) _buildProgressBar(),
+              // 短剧集数控制（仅在初始化后且为短剧时显示）
+              // if (_isInitialized && widget.isDrama) _buildEpisodeControls(),
+              // 视频信息叠加层（仅在初始化后显示）
+              if (_isInitialized && !_isSeeking)
+                Positioned(
+                  bottom: 26,
+                  left: 16,
+                  right: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 视频描述
+                      Text(
+                        widget.video.description,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          shadows: [
+                            Shadow(color: Colors.black87, blurRadius: 4),
+                          ],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    // 分类标签（如果有）
-                    if (widget.video.category.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          '#${widget.video.category}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
+                      // 分类标签（如果有）
+                      if (widget.video.category.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            '#${widget.video.category}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
-                      ),
-                    if (_isInitialized &&
-                        widget.video.totalEpisodes != null &&
-                        widget.video.totalEpisodes! > 1)
-                      _episodeCountBar(),
-                  ],
+                      if (_isInitialized &&
+                          widget.video.totalEpisodes != null &&
+                          widget.video.totalEpisodes! > 1)
+                        _episodeCountBar(),
+                    ],
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       },
     );
   }
 
-  /// 构建短剧集数控制器（已弃用，保留以避免破坏性更改）
-  @Deprecated('此方法已不再使用')
-  Widget _buildEpisodeControls() {
-    return const SizedBox(); // 返回空组件，避免破坏性更改
-  }
-
-  /// 播放上一集（已弃用，保留以避免破坏性更改）
-  @Deprecated('此方法已不再使用')
-  void _playPreviousEpisode() {
-    // 此方法已不再使用
-  }
-
-  /// 播放下一集（已弃用，保留以避免破坏性更改）
-  @Deprecated('此方法已不再使用')
-  void _playNextEpisode() {
-    // 此方法已不再使用
+  /// 构建加载占位符
+  Widget _buildLoadingPlaceholder() {
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Colors.white),
+            SizedBox(height: 16),
+            Text('重新加载视频...', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 构建集数行
