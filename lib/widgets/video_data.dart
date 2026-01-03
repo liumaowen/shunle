@@ -226,3 +226,87 @@ class TabsType {
     this.isDramaType = false,
   });
 }
+/// 合集页面顶部tabs数据
+const List<Map<String, dynamic>> tabsData = [
+      {
+        'title': '推荐',
+        'id': '0',
+        'videoType': '1',
+        'sortType': '7',
+        'collectionId': '',
+      },
+      {
+        'title': '绿帽',
+        'id': '2',
+        'videoType': '',
+        'sortType': '2',
+        'collectionId': '25',
+      },
+      {
+        'title': '萝莉',
+        'id': '3',
+        'videoType': '',
+        'sortType': '0',
+        'collectionId': '31',
+      },
+      {
+        'title': '深喉',
+        'id': '4',
+        'videoType': '',
+        'sortType': '2',
+        'collectionId': '11',
+      },
+      {
+        'title': '泄密',
+        'id': '5',
+        'videoType': '',
+        'sortType': '2',
+        'collectionId': '8',
+      },
+      {
+        'title': '麻豆',
+        'id': '1',
+        'videoType': '',
+        'sortType': '0',
+        'collectionId': '152',
+      },
+    ];
+
+/// 合集页面分类数据
+const List<Map<String, dynamic>> collectionCategories = [
+      {
+        'title': '绿帽淫妻',
+        'id': '2',
+        'videoType': '',
+        'sortType': '2',
+        'collectionId': '25',
+      },
+      {
+        'title': '萝莉少女',
+        'id': '3',
+        'videoType': '',
+        'sortType': '0',
+        'collectionId': '31',
+      },
+      {
+        'title': '暴力深喉',
+        'id': '4',
+        'videoType': '',
+        'sortType': '2',
+        'collectionId': '11',
+      },
+      {
+        'title': '泄密流出',
+        'id': '5',
+        'videoType': '',
+        'sortType': '2',
+        'collectionId': '8',
+      },
+      {
+        'title': '麻豆女神',
+        'id': '1',
+        'videoType': '',
+        'sortType': '0',
+        'collectionId': '152',
+      },
+];

@@ -621,10 +621,6 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         if (_isInitialized) {
           // 获取视频宽高比
           double videoRatio = _videoController!.value.aspectRatio;
-          Size size = _videoController!.value.size;
-          debugPrint(
-            '🎬 视频尺寸: ${size.width}x${size.height}, 比例: $videoRatio',
-          );
           // 判断视频比例，决定填充方式
           // 9/16 = 0.5625，小于这个比例的竖屏视频铺满屏幕
           bool isVerticalVideo = videoRatio <= 0.5625;

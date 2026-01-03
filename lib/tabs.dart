@@ -2,6 +2,7 @@ import "dart:ui";
 
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
+import "package:shunle/collection/collection.dart";
 import "package:shunle/drama/drama.dart";
 import "package:shunle/home/home.dart";
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
@@ -44,6 +45,16 @@ class _TabsState extends State<Tabs> {
       item: ItemConfig(
         icon: SizedBox.shrink(),
         title: "短剧",
+        activeForegroundColor: Colors.white, // 选中时的颜色
+        inactiveForegroundColor: Colors.grey, // 未选中时的颜色
+        textStyle: TextStyle(height: 2),
+      ),
+    ),
+    PersistentTabConfig(
+      screen: Collection(),
+      item: ItemConfig(
+        icon: SizedBox.shrink(),
+        title: "合集",
         activeForegroundColor: Colors.white, // 选中时的颜色
         inactiveForegroundColor: Colors.grey, // 未选中时的颜色
         textStyle: TextStyle(height: 2),
