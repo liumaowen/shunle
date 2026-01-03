@@ -42,6 +42,7 @@ class _CollectionState extends State<Collection> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.black,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0),
           child: CollectTabs(
