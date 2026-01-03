@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import "package:flutter/services.dart";
 import 'package:provider/provider.dart';
 import 'package:shunle/providers/video_list_provider.dart';
-import 'package:shunle/providers/video_manager.dart';
 import 'package:shunle/splash_screen.dart';
 import 'package:shunle/providers/global_config.dart';
 
@@ -14,7 +13,6 @@ void main() async {
   runApp(
     // MultiProvider(
     //   providers: [
-    //     ChangeNotifierProvider(create: (context) => VideoManager()),
     //     ChangeNotifierProvider(create: (context) => VideoListProvider()),
     //   ],
     //   child: const MyApp()

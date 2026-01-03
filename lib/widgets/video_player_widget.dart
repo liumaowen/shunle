@@ -148,7 +148,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
       // 初始化播放器
       await _videoController!.initialize();
-
+      debugPrint('视频已初始化: ${widget.video.description}');
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -171,7 +171,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
       if (mounted) {
         setState(() {
           _hasError = true;
-          debugPrint('1111播放器初始化失败:${widget.video.videoUrl}');
+          debugPrint('播放器初始化失败:${widget.video.videoUrl}');
         });
         // 通知父组件视频加载失败
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -584,7 +584,6 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   void dispose() {
     // 标记组件即将销毁，防止后续回调执行
     _isDisposing = true;
-    debugPrint('🔴 开始释放 VideoPlayerWidget 资源: ${widget.video.id}');
 
     // 释放播放器资源
     if (_videoController != null) {
@@ -594,20 +593,12 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
     }
 
     // 释放ValueNotifier资源
-    debugPrint('🔔 释放 ValueNotifier 监听器');
     _positionNotifier.dispose();
 
     // 取消防抖 Timer
     if (_before10Timer != null) {
-      debugPrint('⏰ 取消防抖 Timer');
       _before10Timer?.cancel();
     }
-
-    // 清理所有 WidgetsBinding 回调
-    // 注意：addPostFrameCallback 是一次性回调，会自动清理
-    // 但为了确保清理，我们添加一个标记来防止组件销毁后仍然执行回调
-
-    debugPrint('✅ VideoPlayerWidget 资源释放完成: ${widget.video.id}');
     super.dispose();
   }
 
@@ -630,6 +621,10 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
         if (_isInitialized) {
           // 获取视频宽高比
           double videoRatio = _videoController!.value.aspectRatio;
+          Size size = _videoController!.value.size;
+          debugPrint(
+            '🎬 视频尺寸: ${size.width}x${size.height}, 比例: $videoRatio',
+          );
           // 判断视频比例，决定填充方式
           // 9/16 = 0.5625，小于这个比例的竖屏视频铺满屏幕
           bool isVerticalVideo = videoRatio <= 0.5625;

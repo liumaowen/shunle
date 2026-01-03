@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shunle/providers/global_config.dart';
-import 'package:shunle/providers/video_manager.dart';
-import 'package:shunle/widgets/optimized_video_player_widget.dart';
+
 import 'package:shunle/widgets/video_data.dart';
 import 'dart:async';
 
@@ -30,8 +29,6 @@ class ShortVideoList extends StatefulWidget {
   /// 集数切换回调
   final Function(int)? onEpisodeChange;
 
-  final VideoManager? videoManager;
-
   const ShortVideoList({
     super.key,
     required this.tab,
@@ -39,7 +36,6 @@ class ShortVideoList extends StatefulWidget {
     this.showEpisodeControls = false,
     this.onDramaTap,
     this.onEpisodeChange,
-    this.videoManager,
   });
 
   @override
@@ -55,25 +51,17 @@ class ShortVideoListState extends State<ShortVideoList> {
 
   /// 暂停当前播放的视频
   void pauseCurrentVideo() {
-    debugPrint('⏸️ ShortVideoList.pauseCurrentVideo() 当前索引: $_currentIndex');
     final playerState = _playerKeys[_currentIndex]?.currentState;
     if (playerState != null) {
-      debugPrint('✅ 找到视频播放器状态，执行暂停：${playerState.widget.video.description}');
       playerState.pause();
-    } else {
-      debugPrint('❌ 未找到视频播放器状态，当前缓存数量: ${_playerKeys.length}');
     }
   }
 
   /// 播放当前视频
   void playCurrentVideo() {
-    debugPrint('▶️ ShortVideoList.playCurrentVideo() 当前索引: $_currentIndex');
     final playerState = _playerKeys[_currentIndex]?.currentState;
     if (playerState != null) {
-      debugPrint('✅ 找到视频播放器状态，执行播放：${playerState.widget.video.description}');
       playerState.play();
-    } else {
-      debugPrint('❌ 未找到视频播放器状态，当前缓存数量: ${_playerKeys.length}');
     }
   }
 
@@ -89,10 +77,10 @@ class ShortVideoListState extends State<ShortVideoList> {
   /// 构建普通视频项目
   Widget _buildNormalVideoItem(VideoData video, int index, int len) {
     return Center(
-      child: OptimizedVideoPlayerWidget(
+      child: VideoPlayerWidget(
+        key: _playerKeys[index],
+        len: len,
         video: video,
-        tabId: widget.tab.id,
-        listIndex: index,
         // 只有当前可见的视频才播放
         shouldPlay: index == _currentIndex,
         // 视频加载失败的回调
@@ -108,10 +96,10 @@ class ShortVideoListState extends State<ShortVideoList> {
     return Stack(
       children: [
         Center(
-          child: OptimizedVideoPlayerWidget(
+          child: VideoPlayerWidget(
+            key: _playerKeys[index],
+            len: len,
             video: drama,
-            tabId: widget.tab.id,
-            listIndex: index,
             // 只有当前可见的视频才播放
             shouldPlay: index == _currentIndex,
             // 视频加载失败的回调
@@ -304,40 +292,23 @@ class ShortVideoListState extends State<ShortVideoList> {
   /// 页面改变回调
   /// 更新当前页面索引，控制视频的播放/暂停
   void _onPageChanged(int index) {
-    final provider = context.read<VideoListProvider>();
-    final videos = provider.videos;
-    VideoManager manager;
-    if (widget.videoManager != null) {
-      manager = widget.videoManager!;
-    } else {
-      manager = context.read<VideoManager>();
-    }
-    if (index < videos.length) {
-      final video = videos[index];
-      manager.switchToVideo(
-        video: video,
-        tabId: widget.tab.id,
-        listIndex: index,
-      );
-    }
-
-    // // 暂停之前的视频
-    // _playerKeys[_currentIndex]?.currentState?.pause();
+    // 暂停之前的视频
+    _playerKeys[_currentIndex]?.currentState?.pause();
 
     // 更新当前索引
     setState(() {
       _currentIndex = index;
     });
 
-    // // 播放当前视频
-    // _playerKeys[_currentIndex]?.currentState?.play();
+    // 播放当前视频
+    _playerKeys[_currentIndex]?.currentState?.play();
 
-    // // 记录访问顺序（LRU）
-    // _cacheAccessOrder.remove(index);
-    // _cacheAccessOrder.add(index);
+    // 记录访问顺序（LRU）
+    _cacheAccessOrder.remove(index);
+    _cacheAccessOrder.add(index);
 
-    // // 清理超出缓存范围的视频播放器
-    // _cleanupOutOfRangeVideos();
+    // 清理超出缓存范围的视频播放器
+    _cleanupOutOfRangeVideos();
 
     // 预加载封面
     _preloadCovers();
@@ -427,62 +398,67 @@ class ShortVideoListState extends State<ShortVideoList> {
   Widget build(BuildContext context) {
     return Consumer<VideoListProvider>(
       builder: (context, provider, child) {
-        return Consumer<VideoManager>(
-          builder: (context, manager, child) {
-            // 初始化加载中
-            if (provider.videos.isEmpty &&
-                provider.loadingState == LoadingState.loading) {
-              return _buildLoadingWidget();
-            }
+        // 初始化加载中
+        if (provider.videos.isEmpty &&
+            provider.loadingState == LoadingState.loading) {
+          return _buildLoadingWidget();
+        }
 
-            // 初始化加载失败
-            if (provider.videos.isEmpty &&
-                provider.loadingState == LoadingState.error) {
-              return _buildErrorWidget(
-                provider.errorMessage ?? '加载失败',
-                () => provider.retry(widget.tab, widget.dramaId),
-              );
-            }
+        // 初始化加载失败
+        if (provider.videos.isEmpty &&
+            provider.loadingState == LoadingState.error) {
+          return _buildErrorWidget(
+            provider.errorMessage ?? '加载失败',
+            () => provider.retry(widget.tab, widget.dramaId),
+          );
+        }
 
-            // 列表为空（无视频）
-            if (provider.videos.isEmpty) {
-              return _buildEmptyWidget();
-            }
-            debugPrint('当前索引：$_currentIndex 总数：${provider.videos.length} ');
-            return Stack(
-              children: [
-                PageView.builder(
-                  controller: _pageController,
-                  scrollDirection: Axis.vertical,
-                  physics: const PageScrollPhysics(), // web 滑动
-                  onPageChanged: _onPageChanged,
-                  // 🚨 关键：禁用 PageView 的隐式滚动预加载
-                  // PageView 的 allowImplicitScrolling 会导致预加载相邻页面
-                  // 这会导致 VideoManager 创建多个控制器，然后 LRU 释放它们
-                  // 导致已构建的 widget 访问已释放的控制器
-                  // 通过禁用此选项，让 VideoManager 显式控制预加载
-                  allowImplicitScrolling: false,
-                  // 如果还有更多数据，itemCount 加 1 用于显示加载指示器
-                  itemCount:
-                      provider.videos.length + (provider.hasMore ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    // 最后一项显示加载指示器（当还有更多数据时）
-                    if (index >= provider.videos.length) {
-                      return _buildLoadingIndicator();
-                    }
+        // 列表为空（无视频）
+        if (provider.videos.isEmpty) {
+          return _buildEmptyWidget();
+        }
+        debugPrint('当前索引：$_currentIndex 总数：${provider.videos.length} ');
+        return Stack(
+          children: [
+            PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              physics: const PageScrollPhysics(), // web 滑动
+              onPageChanged: _onPageChanged,
+              allowImplicitScrolling: true,
+              // 如果还有更多数据，itemCount 加 1 用于显示加载指示器
+              itemCount: provider.videos.length + (provider.hasMore ? 1 : 0),
+              itemBuilder: (context, index) {
+                // 最后一项显示加载指示器（当还有更多数据时）
+                if (index >= provider.videos.length) {
+                  return _buildLoadingIndicator();
+                }
 
-                    final video = provider.videos[index];
-                    return _buildVideoItem(
-                      video,
-                      index,
-                      provider.videos.length,
-                    );
-                  },
-                ),
-                _buildNavigationButtons(),
-              ],
-            );
-          },
+                final video = provider.videos[index];
+                // 检查是否在缓存范围内
+                final isInCacheRange =
+                    (index - _currentIndex).abs() <= _cacheRange;
+                // 只为缓存范围内的视频创建播放器
+                if (isInCacheRange) {
+                  // 为每个视频创建全局键
+                  if (!_playerKeys.containsKey(index)) {
+                    _playerKeys[index] = GlobalKey<VideoPlayerWidgetState>();
+                  }
+
+                  return _buildVideoItem(video, index, provider.videos.length);
+                } else {
+                  // 超出缓存范围的视频显示占位符
+                  return Container(
+                    color: Colors.black,
+                    child: Center(
+                      child: CircularProgressIndicator(color: Colors.white70),
+                    ),
+                  );
+                }
+              },
+            ),
+            _buildNavigationButtons(),
+          ],
         );
       },
     );

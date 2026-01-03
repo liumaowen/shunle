@@ -50,10 +50,6 @@ class CoverCacheManager {
     // 添加新缓存
     _memoryPlayCache[url] = data;
     _currentCacheBytes += data.length;
-
-    debugPrint(
-      '缓存视频: ${_memoryPlayCache.length}个, 总大小: ${(_currentCacheBytes / 1024 / 1024).toStringAsFixed(2)}MB',
-    );
   }
 
   /// 清理缓存以容纳新数据
@@ -63,9 +59,6 @@ class CoverCacheManager {
       final oldestUrl = _memoryCache.keys.first;
       final oldestData = _memoryCache.remove(oldestUrl)!;
       _currentCacheBytes -= oldestData.length;
-      debugPrint(
-        '清理缓存: $oldestUrl, 释放: ${(oldestData.length / 1024).toStringAsFixed(2)}KB',
-      );
     }
   }
 
