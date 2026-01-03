@@ -628,7 +628,26 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
           // 判断视频比例，决定填充方式
           // 9/16 = 0.5625，小于这个比例的竖屏视频铺满屏幕
           bool isVerticalVideo = videoRatio <= 0.5625;
-
+          if (videoRatio > 9/16 && videoRatio <= 2/3) {
+          videoWidget = ClipRect(
+              child: FittedBox(
+                fit: BoxFit.contain,
+                alignment: Alignment.center,
+                child: Transform.scale(
+                  scale: 1.1, // 竖屏视频放大10%
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: null,
+                    height: constraints.maxHeight,
+                    child: AspectRatio(
+                      aspectRatio: videoRatio,
+                      child: VideoPlayer(_videoController!),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          } else {
           videoWidget = FittedBox(
             fit: isVerticalVideo
                 ? BoxFit.cover
@@ -643,6 +662,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
               ),
             ),
           );
+          }
         } else if (widget.video.cachedCover != null) {
           // 未初始化但有封面
           videoWidget = _buildCoverImage();
