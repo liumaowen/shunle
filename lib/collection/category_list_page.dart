@@ -7,10 +7,7 @@ import '../services/video_api_service.dart';
 class CategoryListPage extends StatefulWidget {
   final TabsType category;
 
-  const CategoryListPage({
-    required this.category,
-    Key? key,
-  });
+  const CategoryListPage({required this.category, Key? key});
 
   @override
   State<CategoryListPage> createState() => _CategoryListPageState();
@@ -37,6 +34,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
         videoType: widget.category.videoType,
         sortType: widget.category.sortType,
         collectionId: widget.category.collectionId,
+        isjm: false,
       );
     } catch (e) {
       debugPrint('获取分类视频失败: $e');
@@ -57,9 +55,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
         builder: (context, snapshot) {
           // 加载中
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           // 加载失败
@@ -68,11 +64,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Colors.grey,
-                  ),
+                  const Icon(Icons.error_outline, size: 48, color: Colors.grey),
                   const SizedBox(height: 16),
                   Text(
                     '加载失败: ${snapshot.error}',
@@ -119,7 +111,13 @@ class _CategoryListPageState extends State<CategoryListPage> {
             itemCount: videos.length,
             itemBuilder: (context, index) {
               final video = videos[index];
-              return CategoryVideoItem(video: video);
+              return CategoryVideoItem(
+                video: video,
+                onImageLoaded: () {
+                  // 图片加载完成后的回调
+                  debugPrint('图片加载完成: ${video.description}');
+                },
+              );
             },
           );
         },

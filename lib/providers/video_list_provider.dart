@@ -89,6 +89,7 @@ class VideoListProvider extends ChangeNotifier {
           videoType: tab.videoType,
           sortType: tab.sortType,
           collectionId: tab.collectionId,
+          isjm: true
         );
         if (newVideos.isEmpty) {
           _videos = LocalVideoResource.getLocalVideos();
@@ -146,6 +147,7 @@ class VideoListProvider extends ChangeNotifier {
           videoType: tab.videoType,
           sortType: tab.sortType,
           collectionId: tab.collectionId,
+          isjm: true
         );
       }
 

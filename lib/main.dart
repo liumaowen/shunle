@@ -1,9 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import "package:flutter/services.dart";
-import 'package:provider/provider.dart';
-import 'package:shunle/providers/video_list_provider.dart';
 import 'package:shunle/splash_screen.dart';
 import 'package:shunle/providers/global_config.dart';
 

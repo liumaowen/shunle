@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shunle/providers/global_config.dart';
+import 'package:shunle/utils/cover_cache_manager.dart';
 import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/utils/crypto/uuid_utils.dart';
@@ -84,8 +85,9 @@ class VideoApiService {
   }
 
   static Future<List<VideoData>> fetchMgtvList(
-    Map<String, String> mgtvForm,
-  ) async {
+    Map<String, String> mgtvForm, {
+    bool isjm = true,
+  }) async {
     try {
       // 获取配置信息
       final config = GlobalConfig.instance;
@@ -108,9 +110,7 @@ class VideoApiService {
           .timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
-        final decryptedPassword = AesEncryptSimple.decrypt(
-          text,
-        );
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
         // 提取数据
@@ -118,21 +118,23 @@ class VideoApiService {
         final List<dynamic> dataList = list100 as List<dynamic>;
 
         for (final element in dataList) {
-          element['link'] = AesEncryptSimple.getm3u8(
-            config.playDomain,
-            element['playUrl'],
-          );
+          if (isjm) {
+            element['link'] = AesEncryptSimple.getm3u8(
+              config.playDomain,
+              element['playUrl'],
+            );
+          }
           element['playUrl'] = element['playUrl'];
           element['needJiemi'] = true;
 
           // 设置封面 URL
-          // element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
+          element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
         }
         if (dataList.isEmpty) {
           return [];
         } else {
           // 将 JSON 转换为 VideoData 对象列表
-          return dataList.indexed
+          List<VideoData> da = dataList.indexed
               .map(
                 (item) => VideoData.fromJson(
                   item.$2 as Map<String, dynamic>,
@@ -140,6 +142,29 @@ class VideoApiService {
                 ),
               )
               .toList();
+          if (!isjm) {
+            for (final element in da) {
+              if (element.coverUrl.isNotEmpty) {
+                if (!CoverCacheManager().isCached(element.coverUrl)) {
+                  try {
+                    final coverData = await AesEncryptSimple.fetchAndDecrypt(
+                      element.coverUrl,
+                    );
+                    CoverCacheManager().addToCache(element.coverUrl, coverData);
+                    // 将数据存储到 VideoData 中
+                    element.cachedCover = coverData;
+                  } catch (e) {
+                    debugPrint('分类列表解密封面失败: ${element.coverUrl}, 错误: $e');
+                  }
+                } else {
+                  element.cachedCover = CoverCacheManager().getFromCache(
+                    element.coverUrl,
+                  );
+                }
+              }
+            }
+          }
+          return da;
         }
       } else {
         throw Exception('HTTP 错误: ${response.statusCode}');
@@ -167,18 +192,14 @@ class VideoApiService {
         "x-auth-uuid": UUIDUtils.generateV4(),
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
       };
-      final String aesform = AesEncryptSimple.encrypt(
-        json.encode(dramaForm),
-      );
+      final String aesform = AesEncryptSimple.encrypt(json.encode(dramaForm));
       // 发送 POST 请求
       final response = await http
           .post(uri, headers: headers, body: aesform)
           .timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
-        final decryptedPassword = AesEncryptSimple.decrypt(
-          text,
-        );
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
         // 提取数据
@@ -249,9 +270,7 @@ class VideoApiService {
           .timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
-        final decryptedPassword = AesEncryptSimple.decrypt(
-          text,
-        );
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
         // 提取数据
@@ -331,17 +350,13 @@ class VideoApiService {
           .post(
             uri,
             headers: headers,
-            body: AesEncryptSimple.encrypt(
-              json.encode({"Id": dramaId}),
-            ),
+            body: AesEncryptSimple.encrypt(json.encode({"Id": dramaId})),
           )
           .timeout(timeout);
 
       if (response.statusCode == 200) {
         final text = response.body;
-        final decryptedPassword = AesEncryptSimple.decrypt(
-          text,
-        );
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
         final jsonData = json.decode(decryptedPassword);
         final dramaData = jsonData?['data'];
 
@@ -398,9 +413,7 @@ class VideoApiService {
       final response = await http.post(uri, headers: headers).timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
-        final decryptedPassword = AesEncryptSimple.decrypt(
-          text,
-        );
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
         // 解析 JSON
         final list99 = json.decode(decryptedPassword);
         // 提取数据
@@ -443,33 +456,35 @@ class VideoApiService {
     VideoApiProviderImpl(
       name: 'Kuaishou',
       enabled: false,
-      fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
-        return VideoApiService.fetchVideos(
-          page: page ?? '1',
-          size: pagesize ?? '10',
-        );
-      },
+      fetchFunction:
+          ({page, pagesize, videoType, sortType, collectionId, required isjm}) {
+            return VideoApiService.fetchVideos(
+              page: page ?? '1',
+              size: pagesize ?? '10',
+            );
+          },
     ),
     VideoApiProviderImpl(
       name: 'Mgtv',
       enabled: true,
-      fetchFunction: ({page, pagesize, videoType, sortType, collectionId}) {
-        int pageindex =
-            (Random().nextDouble() *
-                    (GlobalConfig.shortVideoRandomMax -
-                        GlobalConfig.shortVideoRandomMin +
-                        1))
-                .floor() +
-            GlobalConfig.shortVideoRandomMin;
-        Map<String, String> mgtvForm = {
-          'PageIndex': page!.isNotEmpty ? page : pageindex.toString(),
-          'PageSize': pagesize!.isNotEmpty ? pagesize : '5',
-          'VideoType': videoType ?? '',
-          'SortType': sortType ?? '0',
-          'CollectionId': collectionId ?? '',
-        };
-        return VideoApiService.fetchMgtvList(mgtvForm);
-      },
+      fetchFunction:
+          ({page, pagesize, videoType, sortType, collectionId, required isjm}) {
+            int pageindex =
+                (Random().nextDouble() *
+                        (GlobalConfig.shortVideoRandomMax -
+                            GlobalConfig.shortVideoRandomMin +
+                            1))
+                    .floor() +
+                GlobalConfig.shortVideoRandomMin;
+            Map<String, String> mgtvForm = {
+              'PageIndex': page!.isNotEmpty ? page : pageindex.toString(),
+              'PageSize': pagesize!.isNotEmpty ? pagesize : '5',
+              'VideoType': videoType ?? '',
+              'SortType': sortType ?? '0',
+              'CollectionId': collectionId ?? '',
+            };
+            return VideoApiService.fetchMgtvList(mgtvForm, isjm: isjm);
+          },
     ),
   ];
 
@@ -481,6 +496,7 @@ class VideoApiService {
     String? videoType,
     String? sortType,
     String? collectionId,
+    bool isjm = false,
   }) async {
     final enabledProviders = API_PROVIDERS.where((p) => p.enabled).toList();
     final futures = enabledProviders.map((provider) async {
@@ -491,6 +507,7 @@ class VideoApiService {
           collectionId: collectionId,
           videoType: videoType,
           sortType: sortType,
+          isjm: isjm,
         );
         return {'success': true, 'data': videos, 'provider': provider.name};
       } catch (e) {

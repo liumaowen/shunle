@@ -10,7 +10,6 @@ import 'package:shunle/drama/drama_detail_page.dart';
 import 'package:shunle/providers/global_config.dart';
 import 'package:video_player/video_player.dart';
 import 'video_data.dart';
-import '../services/crypto_compute_service.dart';
 import '../utils/cover_cache_manager.dart';
 
 /// 视频播放器 Widget

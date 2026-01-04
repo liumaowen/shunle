@@ -122,6 +122,7 @@ abstract class VideoApiProvider {
   /// [collectionId] - 集合 ID（可选）
   /// [videoType] - 视频类型（可选）
   /// [sortType] - 排序类型（可选）
+  /// [isjm] - 是否视频解密
   ///
   /// 返回视频数据列表
   Future<List<VideoData>> fetch({
@@ -130,6 +131,7 @@ abstract class VideoApiProvider {
     String? collectionId,
     String? videoType,
     String? sortType,
+    bool isjm = false
   });
 }
 
@@ -147,6 +149,7 @@ class VideoApiProviderImpl implements VideoApiProvider {
     String? collectionId,
     String? videoType,
     String? sortType,
+    required bool isjm
   })
   _fetchFunction;
 
@@ -159,6 +162,7 @@ class VideoApiProviderImpl implements VideoApiProvider {
       String? collectionId,
       String? videoType,
       String? sortType,
+      required bool isjm
     })
     fetchFunction,
   }) : _fetchFunction = fetchFunction;
@@ -170,6 +174,7 @@ class VideoApiProviderImpl implements VideoApiProvider {
     String? collectionId,
     String? videoType,
     String? sortType,
+    bool isjm = false,
   }) {
     return _fetchFunction(
       page: page,
@@ -177,6 +182,7 @@ class VideoApiProviderImpl implements VideoApiProvider {
       collectionId: collectionId,
       videoType: videoType,
       sortType: sortType,
+      isjm: isjm
     );
   }
 }

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shunle/providers/global_config.dart';
+import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 
 import 'package:shunle/widgets/video_data.dart';
 import 'dart:async';
 
 import '../providers/video_list_provider.dart';
 import '../utils/cover_cache_manager.dart';
-import '../services/crypto_compute_service.dart';
 import 'video_player_widget.dart';
 import 'episode_selector_dialog.dart';
 
@@ -357,7 +357,7 @@ class ShortVideoListState extends State<ShortVideoList> {
           // ✅ 使用 compute() 在后台线程执行 getm3u8（不阻塞主线程）
           Future.microtask(() async {
             try {
-              final palyData = await CryptoComputeService.instance.getm3u8(
+              final palyData = AesEncryptSimple.getm3u8(
                 config.playDomain,
                 video.playUrl!,
               );
@@ -631,7 +631,7 @@ class ShortVideoListState extends State<ShortVideoList> {
         // ✅ 使用 compute() 在后台线程执行 getm3u8（不阻塞主线程）
         Future.microtask(() async {
           try {
-            final palyData = await CryptoComputeService.instance.getm3u8(
+            final palyData = AesEncryptSimple.getm3u8(
               config.playDomain,
               nextVideo.playUrl!,
             );

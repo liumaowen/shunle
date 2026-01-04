@@ -1,14 +1,104 @@
 import 'package:flutter/material.dart';
+import 'package:shunle/utils/cover_cache_manager.dart';
+import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 import 'video_data.dart';
+import 'visibility_detector.dart';
 
 /// 分类视频列表项组件
-class CategoryVideoItem extends StatelessWidget {
+class CategoryVideoItem extends StatefulWidget {
   final VideoData video;
+  final VoidCallback? onImageLoaded;
 
   const CategoryVideoItem({
     required this.video,
+    this.onImageLoaded,
     Key? key,
-  }) : super(key: key);
+  });
+
+  @override
+  State<CategoryVideoItem> createState() => _CategoryVideoItemState();
+}
+
+class _CategoryVideoItemState extends State<CategoryVideoItem> {
+  late final VideoData _video;
+
+  @override
+  void initState() {
+    super.initState();
+    _video = widget.video;
+    // 不再立即加载，等待可见性检测
+  }
+
+  @override
+  void dispose() {
+    // Timer 已移除，不需要清理
+    super.dispose();
+  }
+
+  /// 异步加载图片
+  void _loadImage() async {
+    try {
+      // 检查全局缓存
+      final cacheManager = CoverCacheManager();
+      if (cacheManager.isCached(_video.coverUrl)) {
+        final cachedData = cacheManager.getFromCache(_video.coverUrl);
+        if (cachedData != null && _video.cachedCover != cachedData) {
+          _video.cachedCover = cachedData;
+        }
+        _updateImageState();
+        return;
+      }
+
+      // 如果没有缓存，立即开始解密加载
+      _updateImageState();
+
+      // 使用类似VideoApiService中的解密逻辑
+      final coverData = await AesEncryptSimple.fetchAndDecrypt(
+        _video.coverUrl,
+      );
+
+      // 添加到全局缓存
+      cacheManager.addToCache(_video.coverUrl, coverData);
+      // 设置到当前视频
+      _video.cachedCover = coverData;
+
+      // 更新UI
+      if (mounted) {
+        setState(() {
+          // 图片已缓存，会自动更新UI
+        });
+      }
+
+      // 通知监听器
+      widget.onImageLoaded?.call();
+    } catch (e) {
+      debugPrint('加载图片失败: ${_video.coverUrl}, 错误: $e');
+    }
+  }
+
+  /// 更新图片状态
+  void _updateImageState() {
+    setState(() {
+      // 图片状态更新
+    });
+  }
+
+  /// 图片变为可见时的回调
+  void _onImageVisible() {
+    // 如果图片已经缓存，不需要加载
+    if (_video.isCoverCached) {
+      return;
+    }
+
+    // 开始加载图片
+    _loadImage();
+  }
+
+  /// 图片变为不可见时的回调
+  void _onImageInvisible() {
+    // 图片不可见时，可以取消加载
+    // 这里简单处理，不清除已缓存的数据
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,8 +111,12 @@ class CategoryVideoItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 图片部分
-          _buildImage(),
+          // 图片部分 - 使用可见性检测
+          VisibilityDetector(
+            onVisible: _onImageVisible,
+            onInvisible: _onImageInvisible,
+            child: _buildImage(),
+          ),
           // 标题部分
           _buildTitle(),
           // 点赞数部分
@@ -36,20 +130,20 @@ class CategoryVideoItem extends StatelessWidget {
   Widget _buildImage() {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-      child: AspectRatio(
-        aspectRatio: 16 / 9, // 16:9 比例
-        child: _buildImageContent(),
-      ),
+      child: _buildImageContent(),
     );
   }
 
   /// 构建图片内容
   Widget _buildImageContent() {
     // 如果有缓存的封面图片
-    if (video.isCoverCached) {
+    if (_video.isCoverCached) {
       return Image.memory(
-        video.cachedCover!,
-        fit: BoxFit.cover,
+        _video.cachedCover!,
+        fit: BoxFit.contain,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          return child;
+        },
         errorBuilder: (context, error, stackTrace) {
           return _buildPlaceholder();
         },
@@ -77,7 +171,7 @@ class CategoryVideoItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Text(
-        video.description.isNotEmpty ? video.description : '无标题',
+        _video.description.isNotEmpty ? _video.description : '无标题',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
@@ -95,7 +189,6 @@ class CategoryVideoItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           const Icon(
             Icons.thumb_up,
