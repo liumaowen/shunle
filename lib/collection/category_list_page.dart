@@ -10,7 +10,7 @@ class CategoryListPage extends StatefulWidget {
   const CategoryListPage({
     required this.category,
     Key? key,
-  }) : super(key: key);
+  });
 
   @override
   State<CategoryListPage> createState() => _CategoryListPageState();
@@ -18,6 +18,8 @@ class CategoryListPage extends StatefulWidget {
 
 class _CategoryListPageState extends State<CategoryListPage> {
   late Future<List<VideoData>> _videosFuture;
+  final String _page = '1';
+  final String _size = '10';
 
   @override
   void initState() {
@@ -30,8 +32,8 @@ class _CategoryListPageState extends State<CategoryListPage> {
     try {
       // 使用 VideoApiService 直接获取数据
       return await VideoApiService.fetchFromAllProviders(
-        page: '',
-        pagesize: '20',
+        page: _page,
+        pagesize: _size,
         videoType: widget.category.videoType,
         sortType: widget.category.sortType,
         collectionId: widget.category.collectionId,

@@ -6,9 +6,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shunle/providers/global_config.dart';
+import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/utils/crypto/uuid_utils.dart';
-import 'package:shunle/services/crypto_compute_service.dart';
 
 /// 视频 API 服务，封装所有视频数据的网络请求
 class VideoApiService {
@@ -108,8 +108,7 @@ class VideoApiService {
           .timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
-        // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+        final decryptedPassword = AesEncryptSimple.decrypt(
           text,
         );
         // 解析 JSON
@@ -118,9 +117,8 @@ class VideoApiService {
         final list100 = list99?['data']['items'] ?? [];
         final List<dynamic> dataList = list100 as List<dynamic>;
 
-        // ✅ 使用 Isolate 生成所有 m3u8 URL
         for (final element in dataList) {
-          element['link'] = await CryptoComputeService.instance.getm3u8(
+          element['link'] = AesEncryptSimple.getm3u8(
             config.playDomain,
             element['playUrl'],
           );
@@ -169,8 +167,7 @@ class VideoApiService {
         "x-auth-uuid": UUIDUtils.generateV4(),
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
       };
-      // ✅ 使用 Isolate 加密（不阻塞主线程）
-      final String aesform = await CryptoComputeService.instance.encrypt(
+      final String aesform = AesEncryptSimple.encrypt(
         json.encode(dramaForm),
       );
       // 发送 POST 请求
@@ -179,8 +176,7 @@ class VideoApiService {
           .timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
-        // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+        final decryptedPassword = AesEncryptSimple.decrypt(
           text,
         );
         // 解析 JSON
@@ -189,9 +185,8 @@ class VideoApiService {
         final list100 = list99?['data']['items'] ?? [];
         final List<dynamic> dataList = list100 as List<dynamic>;
 
-        // ✅ 使用 Isolate 生成所有 m3u8 URL
         for (final element in dataList) {
-          element['link'] = await CryptoComputeService.instance.getm3u8(
+          element['link'] = AesEncryptSimple.getm3u8(
             config.playDomain,
             element['first']['playUrl'],
           );
@@ -245,8 +240,7 @@ class VideoApiService {
         "x-auth-uuid": UUIDUtils.generateV4(),
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
       };
-      // ✅ 使用 Isolate 加密（不阻塞主线程）
-      final String aesform = await CryptoComputeService.instance.encrypt(
+      final String aesform = AesEncryptSimple.encrypt(
         json.encode({"Id": dramaId}),
       );
       // 发送 POST 请求
@@ -255,8 +249,7 @@ class VideoApiService {
           .timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
-        // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+        final decryptedPassword = AesEncryptSimple.decrypt(
           text,
         );
         // 解析 JSON
@@ -265,11 +258,10 @@ class VideoApiService {
         final list100 = list99?['data']['items'] ?? [];
         final List<dynamic> dataList = list100 as List<dynamic>;
 
-        // ✅ 使用 Isolate 生成前 5 个视频的 m3u8 URL
         for (var i = 0; i < dataList.length; i++) {
           final element = dataList[i];
           if (i < 5) {
-            element['link'] = await CryptoComputeService.instance.getm3u8(
+            element['link'] = AesEncryptSimple.getm3u8(
               config.playDomain,
               element['playUrl'],
             );
@@ -335,12 +327,11 @@ class VideoApiService {
         "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
       };
 
-      // ✅ 使用 Isolate 加密（不阻塞主线程）
       final response = await http
           .post(
             uri,
             headers: headers,
-            body: await CryptoComputeService.instance.encrypt(
+            body: AesEncryptSimple.encrypt(
               json.encode({"Id": dramaId}),
             ),
           )
@@ -348,8 +339,7 @@ class VideoApiService {
 
       if (response.statusCode == 200) {
         final text = response.body;
-        // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+        final decryptedPassword = AesEncryptSimple.decrypt(
           text,
         );
         final jsonData = json.decode(decryptedPassword);
@@ -408,8 +398,7 @@ class VideoApiService {
       final response = await http.post(uri, headers: headers).timeout(timeout);
       if (response.statusCode == 200) {
         final text = response.body;
-        // ✅ 使用 Isolate 解密数据（不阻塞主线程）
-        final decryptedPassword = await CryptoComputeService.instance.decrypt(
+        final decryptedPassword = AesEncryptSimple.decrypt(
           text,
         );
         // 解析 JSON
