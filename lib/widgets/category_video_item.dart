@@ -54,7 +54,6 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
         }
       } else {
         // 没有缓存，开始解密
-        debugPrint('开始解密图片: ${_video.coverUrl}');
         final coverData = await AesEncryptSimple.fetchAndDecrypt(
           _video.coverUrl,
         );
@@ -62,7 +61,6 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
         // 添加到全局缓存
         cacheManager.addToCache(_video.coverUrl, coverData);
         _video.cachedCover = coverData;
-        debugPrint('图片解密完成: ${_video.coverUrl}');
       }
 
       // 解密完成或已有缓存，更新UI显示图片
@@ -195,7 +193,6 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
-        textAlign: TextAlign.center,
       ),
     );
   }

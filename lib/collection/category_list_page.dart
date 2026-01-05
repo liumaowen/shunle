@@ -179,7 +179,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
                 video: video,
                 onImageLoaded: () {
                   // 图片加载完成后的回调
-                  debugPrint('图片加载完成: ${video.description}');
+                  // debugPrint('图片加载完成: ${video.description}');
                 },
               );
             },
