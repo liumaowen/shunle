@@ -21,6 +21,8 @@ class VideoData {
 
   // 预留字段（未来扩展）
   final String category; // 分类（推荐、关注等）
+  final String? likes; // 喜欢
+  final String? viewCount; // 查看次数
 
   // 短剧相关字段
   ContentType contentType; // 内容类型
@@ -86,6 +88,8 @@ class VideoData {
     this.totalEpisodes,
     this.currentEpisode = 1,
     this.episodes,
+    this.likes,
+    this.viewCount,
   });
 
   /// 从 JSON 对象创建 VideoData 实例
@@ -108,6 +112,8 @@ class VideoData {
       needJiemi: json['needJiemi'] as bool? ?? false,
       currentEpisode: int.tryParse(json['collectionIndex']?.toString() ?? '1') ?? 1,
       totalEpisodes: int.tryParse(json['episodeCount']?.toString() ?? '0') ?? 0, // 集数
+      likes: json['likeCount'] as String? ?? '',
+      viewCount: json['viewCount'] as String? ?? '',
     );
   }
 }

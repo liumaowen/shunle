@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:shunle/utils/cover_cache_manager.dart';
 import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 import 'video_data.dart';
-import 'visibility_detector.dart';
 
 /// 分类视频列表项组件
 class CategoryVideoItem extends StatefulWidget {
@@ -21,6 +21,7 @@ class CategoryVideoItem extends StatefulWidget {
 
 class _CategoryVideoItemState extends State<CategoryVideoItem> {
   late final VideoData _video;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -37,6 +38,12 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
 
   /// 异步加载图片
   void _loadImage() async {
+    if (_isLoading) return; // 防止重复加载
+
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       // 检查全局缓存
       final cacheManager = CoverCacheManager();
@@ -45,27 +52,24 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
         if (cachedData != null && _video.cachedCover != cachedData) {
           _video.cachedCover = cachedData;
         }
-        _updateImageState();
-        return;
+      } else {
+        // 没有缓存，开始解密
+        debugPrint('开始解密图片: ${_video.coverUrl}');
+        final coverData = await AesEncryptSimple.fetchAndDecrypt(
+          _video.coverUrl,
+        );
+
+        // 添加到全局缓存
+        cacheManager.addToCache(_video.coverUrl, coverData);
+        _video.cachedCover = coverData;
+        debugPrint('图片解密完成: ${_video.coverUrl}');
       }
 
-      // 如果没有缓存，立即开始解密加载
-      _updateImageState();
-
-      // 使用类似VideoApiService中的解密逻辑
-      final coverData = await AesEncryptSimple.fetchAndDecrypt(
-        _video.coverUrl,
-      );
-
-      // 添加到全局缓存
-      cacheManager.addToCache(_video.coverUrl, coverData);
-      // 设置到当前视频
-      _video.cachedCover = coverData;
-
-      // 更新UI
+      // 解密完成或已有缓存，更新UI显示图片
       if (mounted) {
         setState(() {
-          // 图片已缓存，会自动更新UI
+          _isLoading = false;
+          // 图片已缓存，_buildImageContent 会自动显示图片
         });
       }
 
@@ -73,55 +77,52 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
       widget.onImageLoaded?.call();
     } catch (e) {
       debugPrint('加载图片失败: ${_video.coverUrl}, 错误: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  /// 更新图片状态
-  void _updateImageState() {
-    setState(() {
-      // 图片状态更新
-    });
-  }
+  /// 构建图片内容
 
   /// 图片变为可见时的回调
-  void _onImageVisible() {
+  void _onImageVisible(VisibilityInfo info) {
     // 如果图片已经缓存，不需要加载
     if (_video.isCoverCached) {
       return;
     }
 
-    // 开始加载图片
-    _loadImage();
-  }
-
-  /// 图片变为不可见时的回调
-  void _onImageInvisible() {
-    // 图片不可见时，可以取消加载
-    // 这里简单处理，不清除已缓存的数据
+    // 当组件超过50%可见时加载
+    if (info.visibleFraction > 0.2) {
+      // 开始加载图片
+      _loadImage();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade900,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 图片部分 - 使用可见性检测
-          VisibilityDetector(
-            onVisible: _onImageVisible,
-            onInvisible: _onImageInvisible,
-            child: _buildImage(),
-          ),
-          // 标题部分
-          _buildTitle(),
-          // 点赞数部分
-          _buildLikes(),
-        ],
+    return VisibilityDetector(
+      key: Key('video-item-${_video.id}'),
+      onVisibilityChanged: _onImageVisible,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade900,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 图片部分
+            _buildImage(),
+            // 标题部分
+            _buildTitle(),
+            // 点赞数部分
+            _buildLikes(),
+          ],
+        ),
       ),
     );
   }
@@ -150,6 +151,20 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
       );
     }
 
+    // 如果正在加载，显示加载指示器
+    if (_isLoading) {
+      return Container(
+        height: 280,
+        color: Colors.grey.shade800,
+        child: const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+          ),
+        ),
+      );
+    }
+
     // 显示占位图
     return _buildPlaceholder();
   }
@@ -157,6 +172,7 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
   /// 构建占位图
   Widget _buildPlaceholder() {
     return Container(
+      height: 280,
       color: Colors.grey.shade800,
       child: const Icon(
         Icons.image_not_supported,
@@ -190,14 +206,24 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
+          const Icon(Icons.favorite, color: Colors.grey, size: 12),
+          const SizedBox(width: 4),
+          Text(
+            _video.likes?? '999',
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: 4),
           const Icon(
-            Icons.thumb_up,
+            Icons.visibility,
             color: Colors.grey,
             size: 16,
           ),
           const SizedBox(width: 4),
           Text(
-            _generateRandomLikes(),
+            _video.viewCount?? '999',
             style: const TextStyle(
               color: Colors.grey,
               fontSize: 12,
@@ -208,9 +234,4 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
     );
   }
 
-  /// 生成随机点赞数（占位用）
-  String _generateRandomLikes() {
-    // 生成 100-9999 之间的随机数
-    return (100 + (DateTime.now().millisecondsSinceEpoch % 9900)).toString();
-  }
 }

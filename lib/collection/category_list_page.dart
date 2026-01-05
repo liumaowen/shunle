@@ -15,27 +15,85 @@ class CategoryListPage extends StatefulWidget {
 
 class _CategoryListPageState extends State<CategoryListPage> {
   late Future<List<VideoData>> _videosFuture;
-  final String _page = '1';
-  final String _size = '10';
+  List<VideoData> _allVideos = [];
+  final ScrollController _scrollController = ScrollController();
+  int _currentPage = 1;
+  final int _pageSize = 10;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
     super.initState();
     _videosFuture = _fetchVideos();
+    // 添加滚动监听
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// 滚动监听回调
+  void _onScroll() {
+    if (!_hasMore || _isLoadingMore) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+
+    // 当滚动到倒数第二个项目时加载下一页
+    // 提前一些距离加载，提升用户体验
+    if (currentScroll >= maxScroll - 200) {
+      _loadMore();
+    }
+  }
+
+  /// 加载更多数据
+  void _loadMore() async {
+    if (!_hasMore || _isLoadingMore) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      await _fetchVideos(page: _currentPage + 1);
+    } catch (e) {
+      debugPrint('加载更多数据失败: $e');
+    } finally {
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
   }
 
   /// 获取分类视频数据
-  Future<List<VideoData>> _fetchVideos() async {
+  Future<List<VideoData>> _fetchVideos({int page = 1}) async {
     try {
       // 使用 VideoApiService 直接获取数据
-      return await VideoApiService.fetchFromAllProviders(
-        page: _page,
-        pagesize: _size,
+      final videos = await VideoApiService.fetchFromAllProviders(
+        page: page.toString(),
+        pagesize: _pageSize.toString(),
         videoType: widget.category.videoType,
         sortType: widget.category.sortType,
         collectionId: widget.category.collectionId,
         isjm: false,
       );
+
+      // 检查是否还有更多数据
+      setState(() {
+        if (page == 1) {
+          _allVideos = videos;
+        } else {
+          _allVideos.addAll(videos);
+        }
+        _hasMore = videos.length == _pageSize;
+        _currentPage = page;
+      });
+
+      return videos;
     } catch (e) {
       debugPrint('获取分类视频失败: $e');
       return [];
@@ -106,11 +164,17 @@ class _CategoryListPageState extends State<CategoryListPage> {
           }
 
           // 显示列表
-          final videos = snapshot.data!;
           return ListView.builder(
-            itemCount: videos.length,
+            controller: _scrollController,
+            itemCount: _allVideos.length + (_hasMore ? 1 : 0),
             itemBuilder: (context, index) {
-              final video = videos[index];
+              // 如果是最后一个 item 并且还有更多数据，显示加载指示器
+              if (index == _allVideos.length && _hasMore) {
+                return _buildLoadingIndicator();
+              }
+
+              // 正常的视频项
+              final video = _allVideos[index];
               return CategoryVideoItem(
                 video: video,
                 onImageLoaded: () {
@@ -121,6 +185,21 @@ class _CategoryListPageState extends State<CategoryListPage> {
             },
           );
         },
+      ),
+    );
+  }
+
+  /// 构建加载更多指示器
+  Widget _buildLoadingIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: _isLoadingMore
+            ? const CircularProgressIndicator()
+            : const Text(
+                '没有更多了',
+                style: TextStyle(color: Colors.grey),
+              ),
       ),
     );
   }

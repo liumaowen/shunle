@@ -142,28 +142,28 @@ class VideoApiService {
                 ),
               )
               .toList();
-          if (!isjm) {
-            for (final element in da) {
-              if (element.coverUrl.isNotEmpty) {
-                if (!CoverCacheManager().isCached(element.coverUrl)) {
-                  try {
-                    final coverData = await AesEncryptSimple.fetchAndDecrypt(
-                      element.coverUrl,
-                    );
-                    CoverCacheManager().addToCache(element.coverUrl, coverData);
-                    // 将数据存储到 VideoData 中
-                    element.cachedCover = coverData;
-                  } catch (e) {
-                    debugPrint('分类列表解密封面失败: ${element.coverUrl}, 错误: $e');
-                  }
-                } else {
-                  element.cachedCover = CoverCacheManager().getFromCache(
-                    element.coverUrl,
-                  );
-                }
-              }
-            }
-          }
+          // if (!isjm) {
+          //   for (final element in da) {
+          //     if (element.coverUrl.isNotEmpty) {
+          //       if (!CoverCacheManager().isCached(element.coverUrl)) {
+          //         try {
+          //           final coverData = await AesEncryptSimple.fetchAndDecrypt(
+          //             element.coverUrl,
+          //           );
+          //           CoverCacheManager().addToCache(element.coverUrl, coverData);
+          //           // 将数据存储到 VideoData 中
+          //           element.cachedCover = coverData;
+          //         } catch (e) {
+          //           debugPrint('分类列表解密封面失败: ${element.coverUrl}, 错误: $e');
+          //         }
+          //       } else {
+          //         element.cachedCover = CoverCacheManager().getFromCache(
+          //           element.coverUrl,
+          //         );
+          //       }
+          //     }
+          //   }
+          // }
           return da;
         }
       } else {
