@@ -76,7 +76,7 @@ class _CollectionState extends State<Collection> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade800,
+                backgroundColor: Color(0xFF2b2b2e),
                 padding: const EdgeInsets.symmetric(
                   vertical: 12,
                   horizontal: 10,

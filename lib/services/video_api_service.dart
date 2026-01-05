@@ -130,6 +130,7 @@ class VideoApiService {
           // 设置封面 URL
           element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
         }
+        print(dataList);
         if (dataList.isEmpty) {
           return [];
         } else {

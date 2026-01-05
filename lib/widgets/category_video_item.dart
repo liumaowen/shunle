@@ -9,11 +9,7 @@ class CategoryVideoItem extends StatefulWidget {
   final VideoData video;
   final VoidCallback? onImageLoaded;
 
-  const CategoryVideoItem({
-    required this.video,
-    this.onImageLoaded,
-    Key? key,
-  });
+  const CategoryVideoItem({required this.video, this.onImageLoaded, Key? key});
 
   @override
   State<CategoryVideoItem> createState() => _CategoryVideoItemState();
@@ -91,9 +87,9 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
     if (_video.isCoverCached) {
       return;
     }
-
+    debugPrint('图片变为可见: ${info.visibleFraction}');
     // 当组件超过50%可见时加载
-    if (info.visibleFraction > 0.2) {
+    if (info.visibleFraction > 0.1) {
       // 开始加载图片
       _loadImage();
     }
@@ -200,35 +196,41 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
   /// 构建点赞数
   Widget _buildLikes() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.only(top: 0, left: 12, right: 12, bottom: 12),
       child: Row(
         children: [
-          const Icon(Icons.favorite, color: Colors.grey, size: 12),
+          const Icon(Icons.visibility, color: Colors.grey, size: 14),
           const SizedBox(width: 4),
           Text(
-            _video.likes?? '999',
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-            ),
+            formatNumberSimple(_video.viewCount ?? '1'),
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          const SizedBox(width: 4),
-          const Icon(
-            Icons.visibility,
-            color: Colors.grey,
-            size: 16,
-          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.thumb_up, color: Colors.grey, size: 14),
           const SizedBox(width: 4),
           Text(
-            _video.viewCount?? '999',
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 12,
-            ),
+            formatNumberSimple(_video.likes ?? '1'),
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.favorite, color: Colors.grey, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            formatNumberSimple(_video.collectionCount ?? '1'),
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
         ],
       ),
     );
   }
 
+  String formatNumberSimple(String p) {
+    int s = int.parse(p);
+    if (s >= 10000) {
+      s = s * 8;
+      double wan = s / 10000;
+      return '${(wan % 1 == 0) ? wan.toInt() : wan.toStringAsFixed(1)}万';
+    }
+    return s.toString();
+  }
 }
