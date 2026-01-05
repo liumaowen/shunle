@@ -5,8 +5,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'package:shunle/providers/global_config.dart';
-import 'package:shunle/utils/cover_cache_manager.dart';
 import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/utils/crypto/uuid_utils.dart';
@@ -130,7 +130,6 @@ class VideoApiService {
           // 设置封面 URL
           element['coverUrl'] = '${config.playDomain}${element['imgUrl']}';
         }
-        print(dataList);
         if (dataList.isEmpty) {
           return [];
         } else {
@@ -319,6 +318,7 @@ class VideoApiService {
           .head(Uri.parse(videoUrl))
           .timeout(const Duration(seconds: 5));
       // 返回状态码200表示有效
+      print(response.toString());
       return response.statusCode == 200;
     } catch (e) {
       // 请求异常，视为无效
