@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:shunle/providers/global_config.dart';
 import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
-import 'package:shunle/utils/crypto/apibase.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/utils/crypto/uuid_utils.dart';
 
@@ -75,6 +74,38 @@ class VideoApiService {
     }
   }
 
+  /// 从API获取最终地址
+  static Future<String> getFinalUrlFromApi(String url) async {
+    try {
+      final domain = Uri.parse(url).host.split('.').sublist(1).join('.');
+      final params = {"Domain": domain};
+      final encryptedDomain = AesEncryptSimple.encrypt(json.encode(params));
+
+      final apiUrl =
+          '${Uri.parse(url).scheme}://${Uri.parse(url).host}/Web/GetJumpURL2';
+
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "text/plain"},
+        body: encryptedDomain,
+      );
+
+      if (response.statusCode == 200) {
+        final decryptedResponse = AesEncryptSimple.decrypt(response.body);
+        final data = json.decode(decryptedResponse);
+        final List<String> domains = data['data']['jumpDomains']?.split(',');
+        if (domains.isEmpty) {
+          return '无法从API获取最终地址';
+        }
+        return domains[0];
+      } else {
+        return 'API请求失败';
+      }
+    } catch (e) {
+      return '从API获取最终地址时出错: $e';
+    }
+  }
+
   /// 通过自己接口解析apibase获取配置，防止迷路
   static Future<void> getapibase() async {
     String url = GlobalConfig.yongjiuapiBase;
@@ -91,7 +122,7 @@ class VideoApiService {
       if (response.statusCode == 200) {
         final text = response.body;
         if (text.startsWith('http')) {
-          final finalurl = await ApiBase.getFinalUrlFromApi(text);
+          final finalurl = await getFinalUrlFromApi(text);
           if (finalurl.startsWith('http')) {
             GlobalConfig.apiBase = finalurl;
           }

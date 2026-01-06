@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shunle/services/video_api_service.dart';
-import 'package:shunle/utils/crypto/apibase.dart';
 
 /// 应用初始化服务
 /// 提供应用启动时的各种初始化功能
