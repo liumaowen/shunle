@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shunle/services/video_api_service.dart';
+import 'package:shunle/utils/crypto/apibase.dart';
 
 /// 应用初始化服务
 /// 提供应用启动时的各种初始化功能
@@ -24,11 +25,11 @@ class AppInitializer {
       // ✅ 1. 准备初始化环境 - 5%
       onProgressUpdate?.call('准备初始化环境...', 0.05);
 
-      // ✅ 3. 验证加密服务 - 30%
-      onProgressUpdate?.call('验证加密服务...', 0.3);
-      await _validateCryptoService();
+      // ✅ 3. 获取动态数据 - 30%
+      onProgressUpdate?.call('获取动态数据...', 0.3);
+      await getBaseUrl();
 
-      // ✅ 4. 获取应用配置 - 55%
+      // ✅ 4. 获取mg应用配置 - 55%
       onProgressUpdate?.call('获取应用配置...', 0.55);
       await _fetchConfig();
 
@@ -76,16 +77,8 @@ class AppInitializer {
   }
 
   /// 验证加密服务
-  static Future<void> _validateCryptoService() async {
-    debugPrint('验证加密服务...');
-    try {
-      // 尝试执行一个简单的加密解密操作来验证服务
-      // 这里可以添加实际的验证逻辑
-      debugPrint('✅ 加密服务验证成功');
-    } catch (e) {
-      debugPrint('❌ 加密服务验证失败: $e');
-      // 不再 rethrow，因为有降级方案
-    }
+  static Future<void> getBaseUrl() async {
+    await VideoApiService.getapibase();
   }
 
   /// 初始化网络服务

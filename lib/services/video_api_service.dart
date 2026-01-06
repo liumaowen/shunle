@@ -8,13 +8,14 @@ import 'package:http/http.dart' as http;
 import 'dart:async';
 import 'package:shunle/providers/global_config.dart';
 import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
+import 'package:shunle/utils/crypto/apibase.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/utils/crypto/uuid_utils.dart';
 
 /// 视频 API 服务，封装所有视频数据的网络请求
 class VideoApiService {
   /// API 基础 URL
-  static const String baseUrl = 'https://www.qylapi.top/api/ksvideo';
+  static const String baseUrl = 'https://www.qylapi.top/api';
 
   /// 请求超时时间（秒）
   static const Duration timeout = Duration(seconds: 60);
@@ -38,7 +39,7 @@ class VideoApiService {
     try {
       // 构建 URL
       final uri = Uri.parse(
-        baseUrl,
+        '$baseUrl/ksvideo',
       ).replace(queryParameters: {'page': page, 'size': size});
 
       // 发送 GET 请求
@@ -63,6 +64,37 @@ class VideoApiService {
               .toList();
         } else {
           throw Exception('API 返回错误: code=${jsonData['code']}');
+        }
+      } else {
+        throw Exception('HTTP 错误: ${response.statusCode}');
+      }
+    } on http.ClientException catch (e) {
+      throw Exception('网络连接失败: $e');
+    } catch (e) {
+      throw Exception('请求失败: $e');
+    }
+  }
+
+  /// 通过自己接口解析apibase获取配置，防止迷路
+  static Future<void> getapibase() async {
+    String url = GlobalConfig.yongjiuapiBase;
+    try {
+      // 构建 URL
+      final uri = Uri.parse(
+        '$baseUrl/parse/complete',
+      ).replace(queryParameters: {'originalUrl': url});
+
+      // 发送 GET 请求
+      final response = await http.get(uri).timeout(timeout);
+
+      // 检查响应状态码
+      if (response.statusCode == 200) {
+        final text = response.body;
+        if (text.startsWith('http')) {
+          final finalurl = await ApiBase.getFinalUrlFromApi(text);
+          if (finalurl.startsWith('http')) {
+            GlobalConfig.apiBase = finalurl;
+          }
         }
       } else {
         throw Exception('HTTP 错误: ${response.statusCode}');
@@ -397,6 +429,7 @@ class VideoApiService {
 
   static Future<Mgtvconfig> getConfig() async {
     try {
+      debugPrint('GlobalConfig.apiBase: ${GlobalConfig.apiBase}');
       Mgtvconfig mgtvconfig = Mgtvconfig();
       int shortVideoRandomMax = mgtvconfig.shortVideoRandomMax; // 默认值
       int shortVideoRandomMin = mgtvconfig.shortVideoRandomMin; // 默认值

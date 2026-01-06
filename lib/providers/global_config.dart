@@ -31,8 +31,9 @@ class FormType {
 /// 全局配置类
 class GlobalConfig {
   static Mgtvconfig? _instance;
-  // static String apiBase = 'https://api.mgtv109.cc'; // 请求API域名
-  static String apiBase = 'https://ddfad0dbe9.mg925dbd1w.cc'; // 请求API域名
+  static String apiBase = 'https://api.mgtv109.cc'; // 请求API域名
+  // static String apiBase = 'https://ddfad0dbe9.mg925dbd1w.cc'; // 请求API域名
+  static String yongjiuapiBase = 'https://www.mg51.tv/'; // 防迷路永久域名
 
   // 私有构造函数，防止实例化
   GlobalConfig._();
