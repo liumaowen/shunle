@@ -65,8 +65,6 @@ class _ChewieVideoPlayerState extends State<ChewieVideoPlayer> {
         allowFullScreen: true,
         allowMuting: true,
         showControls: true,
-        // 添加额外的控制器配置来防止溢出
-        customControls: const MaterialControls(),
         materialProgressColors: ChewieProgressColors(
           playedColor: Colors.white,
           handleColor: Colors.white,
@@ -180,14 +178,17 @@ class _ChewieVideoPlayerState extends State<ChewieVideoPlayer> {
       );
     }
 
-    return Container(
-      constraints: const BoxConstraints(
-        minHeight: 200,
-        maxHeight: 400,
-      ),
-      child: AspectRatio(
-        aspectRatio: _videoPlayerController.value.aspectRatio,
-        child: Chewie(controller: _chewieController!),
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: Container(
+        constraints: const BoxConstraints(
+          minHeight: 200,
+          maxHeight: 400,
+        ),
+        child: AspectRatio(
+          aspectRatio: _videoPlayerController.value.aspectRatio,
+          child: Chewie(controller: _chewieController!),
+        ),
       ),
     );
   }
