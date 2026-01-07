@@ -177,6 +177,9 @@ class _CategoryListPageState extends State<CategoryListPage> {
               final video = _allVideos[index];
               return CategoryVideoItem(
                 video: video,
+                onToDetail: () {
+                   onToDetail(video);
+                },
                 onImageLoaded: () {
                   // 图片加载完成后的回调
                   // debugPrint('图片加载完成: ${video.description}');
@@ -202,5 +205,9 @@ class _CategoryListPageState extends State<CategoryListPage> {
               ),
       ),
     );
+  }
+
+  void onToDetail( VideoData video) async {
+    final videos = await VideoApiService.videoDetail(video.id);
   }
 }

@@ -121,7 +121,7 @@ class VideoApiService {
       // 检查响应状态码
       if (response.statusCode == 200) {
         final text = response.body;
-        if (text.startsWith('http')) {
+        if (text.startsWith('http') && text != url) {
           final finalurl = await getFinalUrlFromApi(text);
           if (finalurl.startsWith('http')) {
             GlobalConfig.apiBase = finalurl;
@@ -513,6 +513,53 @@ class VideoApiService {
       }
     } catch (e) {
       throw Exception('配置获取失败: $e');
+    }
+  }
+
+  static Future<VideoDetailData> videoDetail(String id) async {
+    try {
+      Map<String, String> mgtvForm = {'id': id};
+      // 获取配置信息
+      final config = GlobalConfig.instance;
+      // 构建 URL
+      final uri = Uri.parse('${GlobalConfig.apiBase}/Web/VideoDetail');
+      // 构建请求头
+      final headers = {
+        "authorization": "Bearer null",
+        "priority": "u=1, i",
+        "x-auth-uuid": UUIDUtils.generateV4(),
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+      };
+      // 发送 POST 请求
+      final response = await http
+          .post(
+            uri,
+            headers: headers,
+            body: Uri(queryParameters: mgtvForm).query,
+          )
+          .timeout(timeout);
+      if (response.statusCode == 200) {
+        final text = response.body;
+        final decryptedPassword = AesEncryptSimple.decrypt(text);
+        // 解析 JSON
+        final list99 = json.decode(decryptedPassword);
+        // 提取数据
+        final list100 = list99?['data'];
+        // list100['link'] = AesEncryptSimple.getm3u8(
+        //   config.playDomain,
+        //   list100['playUrl'],
+        // );
+        list100['playUrl'] = list100['playUrl'];
+        list100['needJiemi'] = true;
+
+        // 设置封面 URL
+        list100['coverUrl'] = '${config.playDomain}${list100['imgUrl']}';
+        return VideoDetailData.fromJson(list100);
+      } else {
+        throw Exception('HTTP 错误: ${response.statusCode}');
+      }
+    } catch (error) {
+      throw Exception('获取视频详情失败: $error');
     }
   }
 

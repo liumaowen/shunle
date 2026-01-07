@@ -125,6 +125,57 @@ class VideoData {
   }
 }
 
+/// 视频详情数据结构
+class VideoDetailData {
+  final String id;
+  final String description; // 视频描述
+  final Duration duration; // 视频时长
+  final String coverUrl; // 封面图 URL
+  String videoUrl; // 视频 URL
+  final String? playUrl; // 视频 URL(带域名)
+  final String? likes; // 喜欢
+  final String? viewCount; // 查看次数
+  final String? collectionCount; // 收藏次数
+  /// 是否需要解密
+  bool? needJiemi = false;
+  ContentType contentType; // 内容类型
+
+  VideoDetailData({
+    required this.id,
+    required this.description,
+    required this.duration,
+    required this.coverUrl,
+    required this.videoUrl,
+    this.playUrl,
+    this.likes,
+    this.viewCount,
+    this.collectionCount,
+    this.needJiemi,
+    this.contentType = ContentType.normal,
+  });
+
+  /// 用于将 API 返回的数据转换为本地数据模型
+  factory VideoDetailData.fromJson(Map<String, dynamic> json) {
+    return VideoDetailData(
+      id:
+          json['id'] as String? ??
+          'ks_${DateTime.now().millisecondsSinceEpoch}',
+      videoUrl: json['link'] as String? ?? '',
+      playUrl: json['playUrl'] as String? ?? '',
+      coverUrl: json['coverUrl'] as String? ?? '',
+      description:
+          json['title'] as String? ?? '', // API 的 title 映射到 description
+      duration: const Duration(seconds: 0), // API 无此字段，使用默认值
+      contentType:
+          json['contentType'] as ContentType? ?? ContentType.normal, // 默认为普通视频
+      needJiemi: json['needJiemi'] as bool? ?? false,
+      likes: json['likeCount'] as String? ?? '',
+      viewCount: json['viewCount'] as String? ?? '',
+      collectionCount: json['collectionCount'] as String? ?? '',
+    );
+  }
+}
+
 /// 视频 API 提供者接口
 abstract class VideoApiProvider {
   String get name;

@@ -8,8 +8,14 @@ import 'video_data.dart';
 class CategoryVideoItem extends StatefulWidget {
   final VideoData video;
   final VoidCallback? onImageLoaded;
+  final VoidCallback? onToDetail;
 
-  const CategoryVideoItem({required this.video, this.onImageLoaded, Key? key});
+  const CategoryVideoItem({
+    required this.video,
+    this.onImageLoaded,
+    Key? key,
+    this.onToDetail,
+  });
 
   @override
   State<CategoryVideoItem> createState() => _CategoryVideoItemState();
@@ -100,22 +106,27 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
     return VisibilityDetector(
       key: Key('video-item-${_video.id}'),
       onVisibilityChanged: _onImageVisible,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade900,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 图片部分
-            _buildImage(),
-            // 标题部分
-            _buildTitle(),
-            // 点赞数部分
-            _buildLikes(),
-          ],
+      child: GestureDetector(
+        onTap: () {
+          widget.onToDetail?.call();
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade900,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 图片部分
+              _buildImage(),
+              // 标题部分
+              _buildTitle(),
+              // 点赞数部分
+              _buildLikes(),
+            ],
+          ),
         ),
       ),
     );

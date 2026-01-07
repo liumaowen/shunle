@@ -39,21 +39,21 @@ class AppInitializer {
       // ✅ 6. 初始化缓存服务 - 75%
       onProgressUpdate?.call('初始化缓存服务...', 0.75);
       await _initializeCacheService();
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1));
 
       // ✅ 7. 加载用户数据 - 85%
       onProgressUpdate?.call('加载用户数据...', 0.85);
       await _loadUserData();
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1));
 
       // ✅ 8. 其他初始化任务 - 95%
       onProgressUpdate?.call('完成其他初始化...', 0.95);
       await _performOtherInitializations();
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1));
 
       // 完成 - 100%
       onProgressUpdate?.call('初始化完成！', 1.0);
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1));
 
       debugPrint('应用初始化完成');
     } catch (e) {
