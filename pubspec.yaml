@@ -50,6 +50,7 @@ dependencies:
   path: ^1.9.1                   # 路径
   visibility_detector: ^0.4.0+2
   shared_preferences: ^2.5.4
+  connectivity_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:

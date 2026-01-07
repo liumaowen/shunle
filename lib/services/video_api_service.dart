@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shunle/providers/global_config.dart';
 import 'package:shunle/utils/crypto/aes_encrypt_simple.dart';
 import 'package:shunle/widgets/video_data.dart';
@@ -18,6 +19,33 @@ class VideoApiService {
 
   /// 请求超时时间（秒）
   static const Duration timeout = Duration(seconds: 60);
+
+  /// 检查网络连接
+  static Future<bool> _checkNetworkConnection() async {
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      debugPrint('当前网络状态: $connectivityResult');
+
+      // 检查是否有网络连接
+      if (connectivityResult.contains(ConnectivityResult.none)) {
+        throw Exception('网络连接不可用');
+      }
+
+      // 如果是移动网络，可以添加额外的检查
+      if (connectivityResult.contains(ConnectivityResult.mobile)) {
+        debugPrint('使用移动网络连接');
+        SnackBar(content: Text('使用移动网络连接'), backgroundColor: Colors.grey);
+      } else if (connectivityResult.contains(ConnectivityResult.wifi)) {
+        debugPrint('使用 WiFi 连接');
+        SnackBar(content: Text('使用 WiFi 连接'), backgroundColor: Colors.grey);
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('网络检查失败: $e');
+      return false;
+    }
+  }
 
   /// 获取视频列表
   ///
@@ -36,11 +64,19 @@ class VideoApiService {
     String size = '10,',
   }) async {
     try {
+      // 检查网络连接
+      final hasNetwork = await _checkNetworkConnection();
+      if (!hasNetwork) {
+        SnackBar(content: Text('网络连接不可用'), backgroundColor: Colors.grey);
+        throw Exception('网络连接不可用');
+      }
+
       // 构建 URL
       final uri = Uri.parse(
         '$baseUrl/ksvideo',
       ).replace(queryParameters: {'page': page, 'size': size});
 
+      debugPrint('请求URL: $uri');
       // 发送 GET 请求
       final response = await http.get(uri).timeout(timeout);
 
@@ -515,7 +551,7 @@ class VideoApiService {
   }
 
   /// 获取视频详情
-  /// 
+  ///
   /// 参数:
   /// - id: 视频ID
   static Future<VideoDetailData> videoDetail(String id) async {
@@ -547,7 +583,10 @@ class VideoApiService {
         final list99 = json.decode(decryptedPassword);
         // 提取数据
         final list100 = list99?['data'];
-        list100['link'] = AesEncryptSimple.getm3u8( config.playDomain, list100['playUrl'] );
+        list100['link'] = AesEncryptSimple.getm3u8(
+          config.playDomain,
+          list100['playUrl'],
+        );
         list100['needJiemi'] = true;
         list100['tags1'] = [];
         final listtags = list100['tags'] as List<dynamic>;
