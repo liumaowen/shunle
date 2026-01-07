@@ -147,7 +147,6 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
       // 初始化播放器
       await _videoController!.initialize();
-      debugPrint('视频已初始化: ${widget.video.description}');
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -814,4 +813,25 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget>
   /// 返回 true 表示需要保持组件状态，实现视频缓存
   @override
   bool get wantKeepAlive => true;
+}
+
+/// 扩展 VideoPlayerWidget 类，提供额外的静态方法
+extension VideoPlayerWidgetExtension on VideoPlayerWidget {
+  /// 从 VideoDetailData 创建 VideoData
+  static VideoData createFromDetail(VideoDetailData detail) {
+    return VideoData(
+      id: detail.id,
+      description: detail.description,
+      duration: detail.duration,
+      videoUrl: detail.videoUrl,
+      coverUrl: detail.coverUrl,
+      playUrl: detail.playUrl,
+      category: '', // VideoDetailData 没有 category 字段
+      needJiemi: detail.needJiemi,
+      likes: detail.likes,
+      viewCount: detail.viewCount,
+      collectionCount: detail.collectionCount,
+      contentType: ContentType.normal,
+    );
+  }
 }

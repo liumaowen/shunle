@@ -40,6 +40,7 @@ dependencies:
   html: ^0.15.6
   persistent_bottom_nav_bar_v2: ^6.2.0
 
+  chewie: ^1.13.0                 # 视频播放器 UI 控件
   video_player: ^2.10.1          # 核心视频播放器
   encrypt: ^5.0.3               # 加密库
   crypto: ^3.0.7                 # 加密库

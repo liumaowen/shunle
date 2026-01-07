@@ -187,7 +187,6 @@ class VideoApiService {
               element['playUrl'],
             );
           }
-          element['playUrl'] = element['playUrl'];
           element['needJiemi'] = true;
 
           // 设置封面 URL
@@ -348,7 +347,6 @@ class VideoApiService {
               element['playUrl'],
             );
           }
-          element['playUrl'] = element['playUrl'];
           element['contentType'] = ContentType.episode;
           element['needJiemi'] = true;
           // 设置封面 URL
@@ -516,6 +514,10 @@ class VideoApiService {
     }
   }
 
+  /// 获取视频详情
+  /// 
+  /// 参数:
+  /// - id: 视频ID
   static Future<VideoDetailData> videoDetail(String id) async {
     try {
       Map<String, String> mgtvForm = {'id': id};
@@ -545,12 +547,16 @@ class VideoApiService {
         final list99 = json.decode(decryptedPassword);
         // 提取数据
         final list100 = list99?['data'];
-        // list100['link'] = AesEncryptSimple.getm3u8(
-        //   config.playDomain,
-        //   list100['playUrl'],
-        // );
-        list100['playUrl'] = list100['playUrl'];
+        list100['link'] = AesEncryptSimple.getm3u8( config.playDomain, list100['playUrl'] );
         list100['needJiemi'] = true;
+        list100['tags1'] = [];
+        final listtags = list100['tags'] as List<dynamic>;
+        for (var element in listtags) {
+          if (element['title'] == '') {
+            continue;
+          }
+          list100['tags1'].add(element['title'] as String);
+        }
 
         // 设置封面 URL
         list100['coverUrl'] = '${config.playDomain}${list100['imgUrl']}';

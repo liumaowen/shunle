@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
+import 'package:shunle/pages/video_detail_page.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/widgets/category_video_item.dart';
 import '../services/video_api_service.dart';
@@ -105,6 +107,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.category.title),
+        centerTitle: true,
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
@@ -178,7 +181,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
               return CategoryVideoItem(
                 video: video,
                 onToDetail: () {
-                   onToDetail(video);
+                  onToDetail(video.id);
                 },
                 onImageLoaded: () {
                   // 图片加载完成后的回调
@@ -199,15 +202,19 @@ class _CategoryListPageState extends State<CategoryListPage> {
       child: Center(
         child: _isLoadingMore
             ? const CircularProgressIndicator()
-            : const Text(
-                '没有更多了',
-                style: TextStyle(color: Colors.grey),
-              ),
+            : const Text('没有更多了', style: TextStyle(color: Colors.grey)),
       ),
     );
   }
 
-  void onToDetail( VideoData video) async {
-    final videos = await VideoApiService.videoDetail(video.id);
+  /// 跳转到视频详情页面
+  /// 参数:
+  /// - id: 视频ID
+  void onToDetail(String id) async {
+    pushScreen(
+      context,
+      screen: VideoDetailPage(videoId: id),
+      pageTransitionAnimation: PageTransitionAnimation.platform,
+    );
   }
 }

@@ -139,6 +139,7 @@ class VideoDetailData {
   /// 是否需要解密
   bool? needJiemi = false;
   ContentType contentType; // 内容类型
+  List<String>? tags; // 标签
 
   VideoDetailData({
     required this.id,
@@ -152,6 +153,7 @@ class VideoDetailData {
     this.collectionCount,
     this.needJiemi,
     this.contentType = ContentType.normal,
+    this.tags,
   });
 
   /// 用于将 API 返回的数据转换为本地数据模型
@@ -172,6 +174,7 @@ class VideoDetailData {
       likes: json['likeCount'] as String? ?? '',
       viewCount: json['viewCount'] as String? ?? '',
       collectionCount: json['collectionCount'] as String? ?? '',
+      tags: (json['tags1'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
     );
   }
 }
