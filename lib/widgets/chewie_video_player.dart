@@ -42,6 +42,8 @@ class _ChewieVideoPlayerState extends State<ChewieVideoPlayer> {
     _initializePlayer();
   }
 
+
+
   Future<void> _initializePlayer() async {
     try {
       _isInitialized = false;
@@ -63,8 +65,12 @@ class _ChewieVideoPlayerState extends State<ChewieVideoPlayer> {
         looping: false,
         aspectRatio: _videoPlayerController.value.aspectRatio,
         allowFullScreen: true,
-        allowMuting: true,
+        allowMuting: false, // 禁用静音按钮以节省空间
         showControls: true,
+        showOptions: false,
+        allowPlaybackSpeedChanging: false, // 禁用播放速度调整
+        playbackSpeeds: [],
+        hideControlsTimer: const Duration(seconds: 3), // 3秒后自动隐藏控制面板
         materialProgressColors: ChewieProgressColors(
           playedColor: Colors.white,
           handleColor: Colors.white,
@@ -97,7 +103,6 @@ class _ChewieVideoPlayerState extends State<ChewieVideoPlayer> {
           );
         },
       );
-
       // 监听视频播放状态
       _videoPlayerController.addListener(_onVideoStateChange);
       if (mounted) {
@@ -214,3 +219,4 @@ extension VideoDataExtension on VideoData {
     );
   }
 }
+

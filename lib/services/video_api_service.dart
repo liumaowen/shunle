@@ -61,7 +61,7 @@ class VideoApiService {
   /// - JSON 解析失败
   static Future<List<VideoData>> fetchVideos({
     required String page,
-    String size = '10,',
+    String size = '10',
   }) async {
     try {
 

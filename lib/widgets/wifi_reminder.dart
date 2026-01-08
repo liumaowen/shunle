@@ -18,7 +18,7 @@ class WifiReminder extends StatefulWidget {
 
 class _WifiReminderState extends State<WifiReminder> {
   final NetworkService _networkService = NetworkService();
-  bool _isWifiConnected = false;
+  bool _isWiredNetworkConnected = false;
   bool _isLoading = true;
 
   @override
@@ -36,16 +36,16 @@ class _WifiReminderState extends State<WifiReminder> {
   /// 检查网络状态
   Future<void> _checkNetworkStatus() async {
     try {
-      final isConnected = await _networkService.getIsWifi();
+      final isConnected = await _networkService.getIsWiredNetwork();
       setState(() {
-        _isWifiConnected = isConnected;
+        _isWiredNetworkConnected = isConnected;
         _isLoading = false;
       });
 
       // 监听网络状态变化
-      _networkService.listenNetworkStatus((isWifi) {
+      _networkService.listenNetworkStatus((isWiredNetwork) {
         setState(() {
-          _isWifiConnected = isWifi;
+          _isWiredNetworkConnected = isWiredNetwork;
         });
       });
     } catch (e) {
@@ -127,8 +127,8 @@ class _WifiReminderState extends State<WifiReminder> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 如果不是WiFi网络，显示离线组件或提醒
-    if (!_isWifiConnected) {
+    // 如果不是有线网络（包括WiFi和以太网），显示离线组件或提醒
+    if (!_isWiredNetworkConnected) {
       if (widget.offlineWidget != null) {
         return widget.offlineWidget!;
       }
