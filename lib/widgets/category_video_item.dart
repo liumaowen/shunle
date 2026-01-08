@@ -148,7 +148,15 @@ class _CategoryVideoItemState extends State<CategoryVideoItem> {
         _video.cachedCover!,
         fit: BoxFit.contain,
         frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          return child;
+          // 同步加载时直接显示，否则使用淡入动画
+          if (wasSynchronouslyLoaded) {
+            return child;
+          }
+          return AnimatedOpacity(
+            opacity: frame != null ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: child,
+          );
         },
         errorBuilder: (context, error, stackTrace) {
           return _buildPlaceholder();
