@@ -1,29 +1,18 @@
 import 'dart:ui';
-import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shunle/splash_screen.dart';
 import 'package:shunle/providers/global_config.dart';
+import 'package:shunle/services/network_service.dart';
+import 'package:shunle/widgets/wifi_reminder.dart';
 
 void main() async {
   // WidgetsFlutterBinding 确保在 MyApp 的 build 方法之前初始化
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化网络监听
-  final connectivityResult = await Connectivity().checkConnectivity();
-  debugPrint('初始网络状态: $connectivityResult');
-  SnackBar(
-    content: Text('初始网络状态: $connectivityResult'),
-    backgroundColor: Colors.grey,
-  );
-
-  // 监听网络变化
-  Connectivity().onConnectivityChanged.listen((result) {
-    debugPrint('网络状态变化: $result');
-    SnackBar(content: Text('网络状态变化: $result'), backgroundColor: Colors.grey);
-    // 可以在这里添加网络状态变化的处理逻辑
-  });
+  // 初始化网络检测服务
+  final networkService = NetworkService();
+  await networkService.initialize();
 
   runApp(
     // MultiProvider(
@@ -62,7 +51,9 @@ class MyApp extends StatelessWidget {
       // 使用深色主题
       themeMode: ThemeMode.dark,
       scrollBehavior: MyScrollBehavior(),
-      home: SplashScreen(),
+      home: const WifiReminder(
+        child: SplashScreen(),
+      ),
       debugShowCheckedModeBanner: false,
     );
   }

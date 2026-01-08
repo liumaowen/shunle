@@ -64,12 +64,6 @@ class VideoApiService {
     String size = '10,',
   }) async {
     try {
-      // 检查网络连接
-      final hasNetwork = await _checkNetworkConnection();
-      if (!hasNetwork) {
-        SnackBar(content: Text('网络连接不可用'), backgroundColor: Colors.grey);
-        throw Exception('网络连接不可用');
-      }
 
       // 构建 URL
       final uri = Uri.parse(
@@ -188,6 +182,12 @@ class VideoApiService {
     bool isjm = true,
   }) async {
     try {
+                  // 检查网络连接
+      final hasNetwork = await _checkNetworkConnection();
+      if (!hasNetwork) {
+        SnackBar(content: Text('网络连接不可用'), backgroundColor: Colors.grey);
+        throw Exception('网络连接不可用');
+      }
       // 获取配置信息
       final config = GlobalConfig.instance;
       // 构建 URL
