@@ -13,10 +13,7 @@ class VideoDetailPage extends StatefulWidget {
   final String videoId;
 
   /// 从视频列表页跳转时传入视频ID
-  const VideoDetailPage({
-    super.key,
-    required this.videoId,
-  });
+  const VideoDetailPage({super.key, required this.videoId});
 
   @override
   State<VideoDetailPage> createState() => _VideoDetailPageState();
@@ -64,18 +61,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   void _onCollectTap() {
     setState(() {
       _isCollected = !_isCollected;
-      _collectionCount = _isCollected ? _collectionCount + 1 : _collectionCount - 1;
+      _collectionCount = _isCollected
+          ? _collectionCount + 1
+          : _collectionCount - 1;
     });
   }
 
   /// 分享按钮点击事件
   void _onShareTap() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('分享功能开发中...'),
-        backgroundColor: Colors.grey,
-      ),
-    );
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   const SnackBar(content: Text('分享功能开发中...'), backgroundColor: Colors.grey),
+    // );
   }
 
   /// 格式化数字显示
@@ -99,34 +95,93 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text(
-          '视频详情',
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: SafeArea(
+              bottom: false, // 只在顶部预留空间给状态栏
+              child: _buildTabContent(),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(child: _buildTabBar()),
+          ),
+        ],
       ),
-      body: FutureBuilder<VideoDetailData>(
-        future: _futureVideoDetail,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.white));
-          }
+    );
+  }
 
-          if (snapshot.hasError) {
-            return _buildErrorWidget(snapshot.error.toString());
-          }
+  Widget _buildTabContent() {
+    return FutureBuilder<VideoDetailData>(
+      future: _futureVideoDetail,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
+        }
 
-          if (!snapshot.hasData) {
-            return const Center(
-              child: Text('没有找到视频详情', style: TextStyle(color: Colors.white)),
-            );
-          }
+        if (snapshot.hasError) {
+          return _buildErrorWidget(snapshot.error.toString());
+        }
 
-          final videoDetail = snapshot.data!;
-          return _buildVideoDetail(videoDetail);
-        },
+        if (!snapshot.hasData) {
+          return const Center(
+            child: Text('没有找到视频详情', style: TextStyle(color: Colors.white)),
+          );
+        }
+
+        final videoDetail = snapshot.data!;
+        return _buildVideoDetail(videoDetail);
+      },
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      height: 50,
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: 0.0), // 顶部半透明
+            Colors.transparent, // 底部完全透明
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          // 返回按钮 + 文字组合
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+            },
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  // 返回图标
+                  SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: Center(
+                      child: Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -139,10 +194,7 @@ class _VideoDetailPageState extends State<VideoDetailPage>
         children: [
           Icon(Icons.error_outline, color: Colors.white, size: 64),
           const SizedBox(height: 16),
-          Text(
-            '加载失败',
-            style: TextStyle(color: Colors.white, fontSize: 18),
-          ),
+          Text('加载失败', style: TextStyle(color: Colors.white, fontSize: 18)),
           const SizedBox(height: 8),
           Text(
             errorMessage,
@@ -166,8 +218,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
   /// 构建视频详情页面
   Widget _buildVideoDetail(VideoDetailData videoDetail) {
     // 初始化点赞收藏数量
-    _likeCount = int.tryParse(videoDetail.likes ?? '0') ?? 0;
-    _collectionCount = int.tryParse(videoDetail.collectionCount ?? '0') ?? 0;
+    _likeCount = int.tryParse(videoDetail.likes ?? '254') ?? 254;
+    _collectionCount =
+        int.tryParse(videoDetail.collectionCount ?? '326') ?? 326;
 
     return Column(
       children: [
@@ -224,7 +277,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Row(
                       children: [
-                        const Icon(Icons.visibility, color: Colors.white70, size: 16),
+                        const Icon(
+                          Icons.visibility,
+                          color: Colors.white70,
+                          size: 16,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           '${_formatNumber(videoDetail.viewCount ?? '0')} 次观看',
@@ -241,23 +298,10 @@ class _VideoDetailPageState extends State<VideoDetailPage>
                   if (videoDetail.tags != null && videoDetail.tags!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '标签',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _buildTags(videoDetail.tags!),
-                          ),
-                        ],
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _buildTags(videoDetail.tags!),
                       ),
                     ),
 
@@ -275,7 +319,9 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
                       // 收藏
                       _buildActionButton(
-                        icon: _isCollected ? Icons.bookmark : Icons.bookmark_border,
+                        icon: _isCollected
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
                         color: _isCollected ? Colors.amber : Colors.white,
                         label: _formatNumber(_collectionCount.toString()),
                         onTap: _onCollectTap,
@@ -303,24 +349,17 @@ class _VideoDetailPageState extends State<VideoDetailPage>
 
   /// 构建标签列表
   List<Widget> _buildTags(List<String> tags) {
-
     return tags.map((tag) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.grey[800],
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: Colors.grey[700]!,
-            width: 1,
-          ),
+          border: Border.all(color: Colors.grey[700]!, width: 1),
         ),
         child: Text(
           '#$tag',
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
         ),
       );
     }).toList();
@@ -338,18 +377,11 @@ class _VideoDetailPageState extends State<VideoDetailPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 28,
-          ),
+          Icon(icon, color: color, size: 28),
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ],
       ),

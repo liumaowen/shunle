@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar_v2/persistent_bottom_nav_bar_v2.dart';
+import 'package:shunle/collection/collect_tabs.dart';
 import 'package:shunle/pages/video_detail_page.dart';
 import 'package:shunle/widgets/video_data.dart';
 import 'package:shunle/widgets/category_video_item.dart';
@@ -17,9 +18,11 @@ class CategoryListPage extends StatefulWidget {
 
 class _CategoryListPageState extends State<CategoryListPage> {
   late Future<List<VideoData>> _videosFuture;
+  late List<TabsType> _tabs;
   List<VideoData> _allVideos = [];
   final ScrollController _scrollController = ScrollController();
   int _currentPage = 1;
+  late String _sortType;
   final int _pageSize = 10;
   bool _hasMore = true;
   bool _isLoadingMore = false;
@@ -27,7 +30,17 @@ class _CategoryListPageState extends State<CategoryListPage> {
   @override
   void initState() {
     super.initState();
-    _videosFuture = _fetchVideos();
+    _sortType = widget.category.sortType??'2';
+    _tabs = collectionListTabs
+        .map(
+          (data) => TabsType(
+            title: data['title'],
+            id: data['id'],
+            sortType: data['sortType'],
+          ),
+        )
+        .toList();
+    _videosFuture = _fetchVideos(sortType: _sortType);
     // 添加滚动监听
     _scrollController.addListener(_onScroll);
   }
@@ -61,7 +74,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
     });
 
     try {
-      await _fetchVideos(page: _currentPage + 1);
+      await _fetchVideos(page: _currentPage + 1,sortType: _sortType);
     } catch (e) {
       debugPrint('加载更多数据失败: $e');
     } finally {
@@ -72,14 +85,14 @@ class _CategoryListPageState extends State<CategoryListPage> {
   }
 
   /// 获取分类视频数据
-  Future<List<VideoData>> _fetchVideos({int page = 1}) async {
+  Future<List<VideoData>> _fetchVideos({int page = 1, String sortType = '2'}) async {
     try {
       // 使用 VideoApiService 直接获取数据
       final videos = await VideoApiService.fetchFromAllProviders(
         page: page.toString(),
         pagesize: _pageSize.toString(),
         videoType: widget.category.videoType,
-        sortType: widget.category.sortType,
+        sortType: sortType,
         collectionId: widget.category.collectionId,
         isjm: false,
       );
@@ -110,6 +123,20 @@ class _CategoryListPageState extends State<CategoryListPage> {
         centerTitle: true,
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(30),
+          child: CollectTabs(
+            tabs: _tabs,
+            onTabChanged: (index) {
+              final tab = _tabs[index];
+              _sortType = tab.sortType??'2';
+              // 加载新的分类数据
+              setState(() {
+                _videosFuture = _fetchVideos(page: 1,sortType: _sortType);
+              });
+            },
+            ),
+        ),
       ),
       body: FutureBuilder<List<VideoData>>(
         future: _videosFuture,
@@ -135,7 +162,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
                   ElevatedButton(
                     onPressed: () {
                       setState(() {
-                        _videosFuture = _fetchVideos();
+                        _videosFuture = _fetchVideos(sortType: _sortType);
                       });
                     },
                     child: const Text('重试'),

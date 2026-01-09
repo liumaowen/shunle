@@ -385,3 +385,47 @@ const List<Map<String, dynamic>> collectionCategories = [
     'collectionId': '152',
   },
 ];
+
+/// 合集页列表页顶部tabs数据
+const List<Map<String, dynamic>> collectionListTabs = [
+  {
+    'title': '热门',
+    'id': '1',
+    'sortType': '2',
+  },
+  {
+    'title': '推荐',
+    'id': '2',
+    'sortType': '1',
+  },
+  {
+    'title': '最新',
+    'id': '3',
+    'sortType': '0',
+  },
+  {
+    'title': '周热',
+    'id': '4',
+    'sortType': '0',
+  },
+  {
+    'title': '热搜',
+    'id': '5',
+    'sortType': '0',
+  },
+  {
+    'title': '点赞',
+    'id': '6',
+    'sortType': '0',
+  },
+  {
+    'title': '收藏',
+    'id': '7',
+    'sortType': '0',
+  },
+  {
+    'title': '随机',
+    'id': '8',
+    'sortType': '0',
+  },
+];
